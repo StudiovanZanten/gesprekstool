@@ -100,7 +100,9 @@ export const talkWeeks = pgTable(
     orgId: uuid('organisatie_id').notNull().references(() => organisations.id, { onDelete: 'cascade' }),
     typeId: uuid('type_id').notNull().references(() => employeeTypes.id, { onDelete: 'cascade' }),
     year: integer('jaar').notNull(),
+    // Een gespreksronde loopt van week tot en met weekEnd (leeg betekent één week).
     week: integer('week').notNull(),
+    weekEnd: integer('tot_week'),
   },
   (t) => [uniqueIndex('gespreksweek_uniek').on(t.typeId, t.year, t.week)],
 )

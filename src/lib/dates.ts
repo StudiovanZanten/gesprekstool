@@ -80,3 +80,11 @@ export function weekLabel(year: number, week: number): string {
     new Date(s + 'T12:00:00Z').toLocaleDateString('nl-NL', { timeZone: TZ, day: 'numeric', month: 'long' })
   return `Week ${week} (${f(mon)} tot ${f(fri)})`
 }
+
+// Naam van een gespreksronde, bijvoorbeeld "Week 44 tot en met 46 (26 oktober tot 13 november)".
+export function roundLabel(year: number, week: number, weekEnd?: number | null): string {
+  if (!weekEnd || weekEnd <= week) return weekLabel(year, week)
+  const f = (s: string) =>
+    new Date(s + 'T12:00:00Z').toLocaleDateString('nl-NL', { timeZone: TZ, day: 'numeric', month: 'long' })
+  return `Week ${week} tot en met ${weekEnd} (${f(mondayOfWeek(year, week))} tot ${f(addDays(mondayOfWeek(year, weekEnd), 4))})`
+}

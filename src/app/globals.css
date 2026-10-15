@@ -69,6 +69,19 @@ textarea { min-height: 110px; resize: vertical; }
 .velden { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 18px; align-items: start; }
 .velden.twee { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .velden.drie { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dagen { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.dagen legend { font-weight: 700; margin-bottom: 8px; padding: 0; }
+.dag { margin: 0; font-weight: 600; cursor: pointer; }
+.dag input { position: absolute; opacity: 0; pointer-events: none; }
+.dag span { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 44px; padding: 0 14px; border: 2px solid var(--lijn); border-radius: 999px; background: #fff; }
+.dag input:checked + span { border-color: var(--hoofd); background: var(--hoofd); color: #fff; }
+.dag input:focus-visible + span { outline: 3px solid var(--accent); }
+.tabel.klein td { padding: 6px 8px; }
+.ronde { display: grid; grid-template-columns: 90px 1fr 1fr; gap: 6px 10px; align-items: end; }
+.ronde-naam { font-weight: 700; padding-bottom: 14px; }
+.ronde-veld { margin: 0; font-weight: 600; font-size: .85rem; color: var(--zacht); display: flex; flex-direction: column; gap: 4px; }
+.ronde-veld input { color: var(--inkt); font-size: 1rem; }
+.ronde-uitleg { grid-column: 2 / -1; margin-top: 0 !important; }
 .deel { border-top: 1px solid var(--lijn); padding-top: 18px; display: flex; flex-direction: column; gap: 14px; }
 .deel h3 { margin: 0; font-size: 1.05rem; }
 .deel p { margin: 0; }

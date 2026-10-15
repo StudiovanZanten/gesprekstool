@@ -15,7 +15,7 @@ import {
   type User,
 } from '@/db'
 import { decrypt } from './crypto'
-import { addDays, isoWeek, mondayOfWeek, todayStr, weekLabel } from './dates'
+import { addDays, isoWeek, mondayOfWeek, roundLabel, todayStr } from './dates'
 
 export const INVITE_DAYS_BEFORE = 21
 
@@ -28,7 +28,7 @@ export async function activeQuestions(questionnaireId: string | null) {
     .orderBy(asc(questions.position))
 }
 
-// Maakt gesprekken aan voor gespreksweken die binnen drie weken beginnen.
+// Maakt gesprekken aan voor gespreksrondes die binnen drie weken beginnen. Eén gesprek per ronde, ook als die meerdere weken duurt.
 // Geeft de nieuwe gesprekken terug, zodat de herinneringstaak een uitnodiging kan sturen.
 export async function ensureTalks(orgId: string, onlyUserId?: string): Promise<Talk[]> {
   const today = todayStr()
@@ -41,7 +41,7 @@ export async function ensureTalks(orgId: string, onlyUserId?: string): Promise<T
   const created: Talk[] = []
   for (const { tw } of weeks) {
     const monday = mondayOfWeek(tw.year, tw.week)
-    const sunday = addDays(monday, 6)
+    const sunday = addDays(mondayOfWeek(tw.year, tw.weekEnd ?? tw.week), 6)
     if (sunday < today || addDays(monday, -INVITE_DAYS_BEFORE) > today) continue
     const conds = [eq(users.orgId, orgId), eq(users.typeId, tw.typeId), eq(users.active, true), eq(users.role, 'medewerker')]
     if (onlyUserId) conds.push(eq(users.id, onlyUserId))
@@ -49,7 +49,7 @@ export async function ensureTalks(orgId: string, onlyUserId?: string): Promise<T
     for (const e of emps) {
       const rows = await db
         .insert(talks)
-        .values({ orgId, employeeId: e.id, talkWeekId: tw.id, label: weekLabel(tw.year, tw.week) })
+        .values({ orgId, employeeId: e.id, talkWeekId: tw.id, label: roundLabel(tw.year, tw.week, tw.weekEnd) })
         .onConflictDoNothing()
         .returning()
       created.push(...rows)
@@ -63,7 +63,7 @@ export async function talkWeekRange(talk: Talk): Promise<{ from: string; to: str
   const [tw] = await db.select().from(talkWeeks).where(eq(talkWeeks.id, talk.talkWeekId))
   if (!tw) return null
   const from = mondayOfWeek(tw.year, tw.week)
-  return { from, to: addDays(from, 7) }
+  return { from, to: addDays(mondayOfWeek(tw.year, tw.weekEnd ?? tw.week), 7) }
 }
 
 // Het gesprek waar de medewerker nu mee bezig is: het eerste dat nog niet gevoerd is.
