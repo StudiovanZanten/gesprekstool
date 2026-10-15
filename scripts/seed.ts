@@ -34,7 +34,10 @@ async function list(orgId: string, name: string, kind: 'gesprek' | 'week', qs: S
 async function main() {
   const adminName = process.env.SEED_ADMIN_NAME
   const adminEmail = process.env.SEED_ADMIN_EMAIL?.toLowerCase().trim()
-  if (!adminName || !adminEmail) throw new Error('Vul SEED_ADMIN_NAME en SEED_ADMIN_EMAIL in')
+  if (!adminName || !adminEmail) {
+    console.log('Geen SEED_ADMIN_NAME en SEED_ADMIN_EMAIL ingevuld, er is niets klaargezet.')
+    return
+  }
 
   const existing = await db.select().from(s.organisations).where(eq(s.organisations.name, ORG_NAME))
   if (existing.length) {

@@ -40,22 +40,16 @@ Het ontwerp (rollen, techniek, vragenlijsten, gegevens) staat in het document "G
 
 Je hebt nodig: je Vercel account, een gratis Neon account en je Brevo account. Wachtwoorden en sleutels vul je zelf in, nooit in de chat.
 
-1. **Database maken.** Maak bij Neon een nieuw project, regio Frankfurt (eu-central-1). Kopieer de verbindingsregel (begint met `postgres://`).
-2. **Project op Vercel.** Kies op Vercel "Add New Project" en kies de repository `gesprekstool`.
-3. **Instellingen invullen.** Vul bij Environment Variables in (voorbeeld staat in `.env.example`):
+1. **Database maken.** Maak bij Neon (neon.tech) een nieuw project, regio Frankfurt (AWS eu-central-1). Kopieer de verbindingsregel (begint met `postgres://`).
+2. **Project op Vercel.** Kies op Vercel "Add New", dan "Project", en kies de repository `gesprekstool`.
+3. **Instellingen invullen.** Vul voor je op Deploy drukt bij Environment Variables in (voorbeeld staat in `.env.example`):
    - `DATABASE_URL`: de verbindingsregel van Neon.
-   - `ENCRYPTION_KEY`, `APP_SECRET` en `CRON_SECRET`: drie verschillende lange geheimen. Maak ze met `npm run sleutel` (drie keer). Bewaar `ENCRYPTION_KEY` ook ergens veilig: zonder die sleutel zijn de antwoorden niet meer te lezen.
+   - `ENCRYPTION_KEY`, `APP_SECRET` en `CRON_SECRET`: drie verschillende geheimen van 32 tekens of meer. Bewaar `ENCRYPTION_KEY` ook ergens veilig, bijvoorbeeld in je wachtwoordkluis: zonder die sleutel zijn de antwoorden niet meer te lezen.
    - `APP_URL`: het webadres van de tool, bijvoorbeeld `https://gesprekken.studiovanzanten.com`.
    - `BREVO_API_KEY`, `MAIL_FROM` en `MAIL_FROM_NAME`: voor de mails.
-4. **Tabellen en eerste beheerder.** Op je laptop, in de map van het project:
-   ```
-   npm install
-   DATABASE_URL="(regel van Neon)" npx drizzle-kit push
-   DATABASE_URL="(regel van Neon)" SEED_ADMIN_NAME="Jouw naam" SEED_ADMIN_EMAIL="jouw@mailadres.nl" npm run db:seed
-   ```
-   Dit zet Brownies&downieS klaar met de vragenlijsten en jou als beheerder.
-5. **Deploy** op Vercel. Daarna log je in met je mailadres.
-6. **Eigen webadres (optioneel).** Voeg bij Vercel een domein toe, bijvoorbeeld `gesprekken.studiovanzanten.com`, en zet de regel die Vercel geeft bij Hostnet in de DNS.
+   - `SEED_ADMIN_NAME` en `SEED_ADMIN_EMAIL`: jouw naam en mailadres. Hiermee wordt bij de eerste keer Brownies&downieS klaargezet met de vragenlijsten en jou als beheerder.
+4. **Deploy.** Vercel maakt zelf de tabellen in de database en zet alles klaar. Daarna log je in met je mailadres.
+5. **Eigen webadres (optioneel).** Voeg bij Vercel een domein toe, bijvoorbeeld `gesprekken.studiovanzanten.com`, en zet de regel die Vercel geeft bij Hostnet in de DNS. Pas daarna `APP_URL` aan.
 
 ## Op je laptop proberen
 
