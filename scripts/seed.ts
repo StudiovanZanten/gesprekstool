@@ -2,7 +2,7 @@
 // Gebruik: SEED_ADMIN_NAME="Naam" SEED_ADMIN_EMAIL="mail@voorbeeld.nl" npm run db:seed
 // Met --demo komen er ook verzonnen testmedewerkers bij (alleen voor op je laptop).
 import 'dotenv/config'
-import { eq } from 'drizzle-orm'
+import { and, eq, notLike } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as s from '../src/db/schema'
@@ -48,6 +48,13 @@ async function main() {
   const shown = maskEmail(adminEmail)
   const existing = await db.select().from(s.organisations).where(eq(s.organisations.name, ORG_NAME))
   if (existing.length) {
+    // Een beheerder zonder geldig mailadres (bijvoorbeeld iets verkeerds ingevuld bij SEED_ADMIN_EMAIL)
+    // kan nooit inloggen. Die halen we weg.
+    const removed = await db
+      .delete(s.users)
+      .where(and(eq(s.users.orgId, existing[0].id), eq(s.users.role, 'beheerder'), notLike(s.users.email, '%@%')))
+      .returning({ id: s.users.id })
+    if (removed.length) console.log(`${removed.length} beheerder(s) zonder geldig mailadres verwijderd.`)
     // Bestaat de organisatie al maar is de beheerder nog niet bekend (bijvoorbeeld een ander mailadres ingevuld),
     // dan komt die er alsnog bij. Bestaande gebruikers blijven zoals ze zijn.
     const [known] = await db.select().from(s.users).where(eq(s.users.email, adminEmail))

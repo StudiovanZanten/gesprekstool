@@ -5,14 +5,15 @@ type T = { id: string; name: string; rhythm: string }
 export function MedewerkerVelden({ u, types, begeleiders }: { u?: User; types: T[]; begeleiders: User[] }) {
   return (
     <>
-      <div className="velden">
+      <div className="velden twee">
         <div className="veld">
           <label htmlFor="naam">Naam</label>
           <input id="naam" name="naam" type="text" required defaultValue={u?.name} />
         </div>
         <div className="veld">
-          <label htmlFor="email">Mailadres (mag leeg, dan inloggen met code)</label>
+          <label htmlFor="email">Mailadres</label>
           <input id="email" name="email" type="email" defaultValue={u?.email ?? ''} />
+          <span className="hint">Geen mailadres? Dan logt iemand in met een inlogcode.</span>
         </div>
         <div className="veld">
           <label htmlFor="rol">Rol</label>
@@ -30,9 +31,10 @@ export function MedewerkerVelden({ u, types, begeleiders }: { u?: User; types: T
           </select>
         </div>
       </div>
-      <details>
-        <summary className="klein">Alleen voor stagiaires</summary>
-        <div className="velden" style={{ marginTop: 12 }}>
+      <div className="deel">
+        <h3>Alleen voor stagiaires</h3>
+        <p className="zacht klein">Laat leeg bij vaste medewerkers en oproepkrachten.</p>
+        <div className="velden drie">
           <div className="veld">
             <label htmlFor="begeleider">Stagebegeleider</label>
             <select id="begeleider" name="begeleider" defaultValue={u?.supervisorId ?? ''}>
@@ -49,7 +51,7 @@ export function MedewerkerVelden({ u, types, begeleiders }: { u?: User; types: T
             <input id="stage_einde" name="stage_einde" type="date" defaultValue={u?.internshipEnd ?? ''} />
           </div>
         </div>
-      </details>
+      </div>
     </>
   )
 }
