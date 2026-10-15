@@ -23,7 +23,7 @@ export function Kop({ org, user }: { org: Organisation; user: User }) {
           ) : (
             <>
               <Link href="/mijn">Start</Link>
-              <Link href="/mijn/terugkijken">Terugkijken</Link>
+              <Link href="/mijn/profiel">Mijn profiel</Link>
             </>
           )}
           <form action={uitloggen}>

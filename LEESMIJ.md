@@ -10,12 +10,13 @@ Het ontwerp (rollen, techniek, vragenlijsten, gegevens) staat in het document "G
 - Inloggen met een link in de mail, of met een inlogcode op een kaartje.
 - Mijn week: de wekelijkse check, één vraag per scherm, met smileys en een knop Lees voor.
 - Mijn gesprek: moment kiezen in de gespreksweek, voorbereiding invullen, en zelf kiezen wat gedeeld wordt.
-- Terugkijken: eerdere gesprekken, afspraken en weekchecks.
+- Mijn profiel: lopende afspraken (af te vinken), doelen uit het laatste gesprek en alle eerdere gesprekken. Plus terugkijken van alle eigen antwoorden en weekchecks.
 
 **Voor beheerder en stagebegeleider**
 - Start: wie om hulp vraagt, komende gesprekken, wie nog geen moment koos, wie al drie weken geen weekcheck deed.
 - Gespreksoverzicht: gedeelde voorbereiding, gedeelde succesjes en tips, de vorige afspraken, en het verslag in drie delen (wat gaat goed, wat vraagt aandacht, wat spreken we af).
 - Planning: vaste gespreksweken per type medewerker, en momenten openzetten.
+- Profiel per medewerker: dezelfde afspraken, doelen en gesprekken, met alleen wat gedeeld is.
 - Medewerkers: toevoegen, type kiezen, stagebegeleider koppelen, inlogcode maken, uit dienst zetten.
 - Instellingen: naam, logo, kleuren, gespreksduur, bewaartermijn, types en vragenlijsten.
 

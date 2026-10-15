@@ -87,6 +87,7 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
                   </div>
                   <div className="rij">
                     <label className="schakel"><input type="checkbox" name="actief" defaultChecked={q.active} /> Vraag staat aan</label>
+                    <label className="schakel"><input type="checkbox" name="doel" defaultChecked={q.isGoal} /> Antwoord is een doel (komt op het profiel)</label>
                     <button className="knop licht klein">Bewaren</button>
                   </div>
                 </form>

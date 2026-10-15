@@ -3,8 +3,10 @@ import { and, asc, desc, eq, ne } from 'drizzle-orm'
 import { notFound } from 'next/navigation'
 import { accessLog, db, employeeTypes, slots, talks, users } from '@/db'
 import { CodeKnop } from '@/components/CodeKnop'
+import { Profiel } from '@/components/Profiel'
+import { profileData } from '@/lib/profile'
 import { MedewerkerVelden } from '@/components/MedewerkerVelden'
-import { canViewEmployee } from '@/lib/access'
+import { canViewEmployee, logAccess } from '@/lib/access'
 import { requireStaff } from '@/lib/auth'
 import { fmtDateLong } from '@/lib/dates'
 import { bewerk, gesprekKlaarzetten, maakCode, uitDienst, weerActief } from '../actions'
@@ -44,6 +46,9 @@ export default async function Medewerker({ params, searchParams }: { params: Pro
         .limit(10)
     : []
 
+  const profile = canView && u.role === 'medewerker' ? await profileData(u.id, true) : null
+  if (profile) await logAccess(me, u.id, 'profiel')
+
   return (
     <main>
       <div>
@@ -52,9 +57,11 @@ export default async function Medewerker({ params, searchParams }: { params: Pro
       </div>
       {melding && MELDING[melding] && <div className={`melding ${melding === 'dubbel' ? 'fout' : 'goed'}`}>{MELDING[melding]}</div>}
 
+      {profile && <Profiel data={profile} zelf={false} />}
+
       {list.length > 0 || (type?.rhythm === 'stage' && u.supervisorId === me.id) ? (
         <section className="kaart">
-          <h2>Gesprekken</h2>
+          <h2>Alle gesprekken en voorbereidingen</h2>
           <div className="lijst">
             {list.map(({ talk, slot }) => (
               <div key={talk.id} className="rij tussen">

@@ -32,10 +32,10 @@ export default async function Mijn() {
           <strong>Mijn gesprek</strong>
           <span className="zacht">{talk ? talk.label : 'Er staat nu geen gesprek klaar.'}</span>
         </Link>
-        <Link href="/mijn/terugkijken" className="tegel">
+        <Link href="/mijn/profiel" className="tegel">
           <span className="icoon"><IconBack /></span>
-          <strong>Terugkijken</strong>
-          <span className="zacht">Eerdere gesprekken, afspraken, succesjes en tips.</span>
+          <strong>Mijn profiel</strong>
+          <span className="zacht">Je afspraken, je doelen en eerdere gesprekken.</span>
         </Link>
       </div>
     </main>

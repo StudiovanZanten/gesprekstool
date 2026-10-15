@@ -54,6 +54,7 @@ export const questions = pgTable(
     allowNote: boolean('toelichting_mogelijk').notNull().default(false),
     showPrevAgreements: boolean('toon_vorige_afspraken').notNull().default(false),
     helpSignal: boolean('hulp_seintje').notNull().default(false),
+    isGoal: boolean('doelvraag').notNull().default(false),
     active: boolean('actief').notNull().default(true),
   },
   (t) => [index('vragen_lijst_idx').on(t.questionnaireId)],
@@ -145,6 +146,7 @@ export const agreements = pgTable('afspraken', {
   textEnc: text('afspraak').notNull(),
   reviewDate: date('terugkijkdatum'),
   done: boolean('gelukt').notNull().default(false),
+  doneAt: timestamp('gelukt_op', { withTimezone: true }),
   createdAt: created(),
 })
 

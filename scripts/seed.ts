@@ -25,6 +25,7 @@ async function list(orgId: string, name: string, kind: 'gesprek' | 'week', qs: S
       allowNote: q.type === 'smiley',
       showPrevAgreements: !!q.prev,
       helpSignal: !!q.help,
+      isGoal: !!q.goal,
     })),
   )
   return ql.id

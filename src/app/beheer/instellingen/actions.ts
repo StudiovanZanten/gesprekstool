@@ -49,6 +49,7 @@ export async function bewaarVraag(id: string, fd: FormData) {
       allowNote: type === 'smiley',
       position: int(fd.get('volgorde'), 1, 999, q.position),
       active: fd.get('actief') === 'on',
+      isGoal: fd.get('doel') === 'on',
     })
     .where(eq(questions.id, id))
   redirect(`/beheer/instellingen?lijst=${q.questionnaireId}&melding=vraag`)

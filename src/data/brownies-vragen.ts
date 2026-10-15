@@ -7,6 +7,7 @@ export type SeedQuestion = {
   topic: string
   prev?: boolean
   help?: boolean
+  goal?: boolean
 }
 
 export const weekcheck: SeedQuestion[] = [
@@ -27,7 +28,7 @@ export const vast: SeedQuestion[] = [
   { text: 'Wat zou je graag willen leren of beter willen kunnen?', type: 'tekst', topic: 'Ontwikkeling' },
   { text: 'Wat kan jouw leidinggevende doen om jou beter te helpen?', type: 'tekst', topic: 'Feedback leidinggevende' },
   { text: 'Welke afspraken maakten we vorige keer? Hoe is dat gegaan?', type: 'tekst', topic: 'Vorige afspraken', prev: true },
-  { text: 'Wat wil jij de komende drie maanden bereiken?', type: 'tekst', topic: 'Doelen en toekomst' },
+  { text: 'Wat wil jij de komende drie maanden bereiken?', type: 'tekst', topic: 'Doelen en toekomst', goal: true },
 ]
 
 export const oproep: SeedQuestion[] = [
@@ -40,7 +41,7 @@ export const oproep: SeedQuestion[] = [
   { text: 'Wat zou je graag beter willen leren tijdens je werk?', type: 'tekst', topic: 'Ontwikkeling' },
   { text: 'Wat kunnen wij als leidinggevenden beter doen voor jou?', type: 'tekst', topic: 'Feedback leidinggevende' },
   { text: 'Hebben we de afspraken van ons vorige gesprek goed uitgevoerd? Wat kan nog beter?', type: 'tekst', topic: 'Vorige afspraken', prev: true },
-  { text: 'Hoe zie jij jouw toekomst bij Brownies&downieS?', type: 'tekst', topic: 'Toekomst' },
+  { text: 'Hoe zie jij jouw toekomst bij Brownies&downieS?', type: 'tekst', topic: 'Toekomst', goal: true },
 ]
 
 export const stage: SeedQuestion[] = [
@@ -54,5 +55,5 @@ export const stage: SeedQuestion[] = [
   { text: 'Aan welke leerdoelen van school moet je nog werken?', type: 'tekst', topic: 'Leerdoelen school' },
   { text: 'Krijg je genoeg uitleg en hulp van je stagebegeleider? Wat kan beter?', type: 'tekst', topic: 'Feedback begeleiding' },
   { text: 'Welke afspraken hebben we vorige keer gemaakt? Hoe is dat gegaan?', type: 'tekst', topic: 'Vorige afspraken', prev: true },
-  { text: 'Wat wil je de komende periode leren of verbeteren?', type: 'tekst', topic: 'Nieuwe leerdoelen' },
+  { text: 'Wat wil je de komende periode leren of verbeteren?', type: 'tekst', topic: 'Nieuwe leerdoelen', goal: true },
 ]

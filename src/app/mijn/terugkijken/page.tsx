@@ -18,6 +18,7 @@ export default async function Terugkijken() {
   return (
     <main className="smal">
       <h1>Terugkijken</h1>
+      <p className="zacht">Al je antwoorden, ook wat je niet gedeeld hebt. Alleen jij ziet dit.</p>
       <section className="stapel">
         <h2>Mijn gesprekken</h2>
         {held.length === 0 && <p className="zacht">Je hebt nog geen gesprekken gehad.</p>}
