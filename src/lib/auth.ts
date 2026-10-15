@@ -82,12 +82,13 @@ export async function tooManyAttempts(kind: string): Promise<boolean> {
   return n >= 10
 }
 
-export async function createLoginToken(userId: string): Promise<string> {
+// Een inloglink werkt standaard 15 minuten. Een welkomstmail krijgt een langere termijn.
+export async function createLoginToken(userId: string, minutes = 15): Promise<string> {
   const token = randomToken()
   await db.insert(loginTokens).values({
     userId,
     tokenHash: sha256(token),
-    expiresAt: new Date(Date.now() + 15 * 60000),
+    expiresAt: new Date(Date.now() + minutes * 60000),
   })
   return token
 }

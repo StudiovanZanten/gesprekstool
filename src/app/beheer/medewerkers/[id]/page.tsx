@@ -9,7 +9,7 @@ import { MedewerkerVelden } from '@/components/MedewerkerVelden'
 import { canViewEmployee, logAccess } from '@/lib/access'
 import { requireStaff } from '@/lib/auth'
 import { fmtDateLong } from '@/lib/dates'
-import { bewerk, gesprekKlaarzetten, maakCode, uitDienst, weerActief } from '../actions'
+import { bewerk, gesprekKlaarzetten, maakCode, stuurUitnodiging, uitDienst, weerActief } from '../actions'
 
 const STATUS: Record<string, string> = { open: 'Nog geen moment', gepland: 'Ingepland', gedeeld: 'Voorbereiding gedeeld', gevoerd: 'Gevoerd' }
 const MELDING: Record<string, string> = {
@@ -18,6 +18,9 @@ const MELDING: Record<string, string> = {
   uitdienst: 'Uit dienst gezet. Inloggen kan niet meer. Na de bewaartermijn worden de gegevens automatisch verwijderd.',
   klaargezet: 'Het gesprek staat klaar. Zet bij Planning momenten open, dan kan de stagiaire kiezen.',
   dubbel: 'Dit mailadres is al in gebruik.',
+  'nieuw-gemaild': 'Toegevoegd. Er is een welkomstmail gestuurd met een inloglink die drie dagen werkt. Vraag de medewerker ook even in de map Ongewenst of Overig te kijken.',
+  uitgenodigd: 'De uitnodiging is gemaild. De inloglink werkt drie dagen.',
+  mailfout: 'De mail kon niet verstuurd worden. Probeer het later opnieuw, of maak hieronder een inlogcode.',
 }
 
 export default async function Medewerker({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ melding?: string }> }) {
@@ -55,7 +58,7 @@ export default async function Medewerker({ params, searchParams }: { params: Pro
         <h1>{u.name}</h1>
         <p className="zacht">{type?.name ?? (u.role === 'beheerder' ? 'Beheerder' : u.role === 'begeleider' ? 'Stagebegeleider' : '')}</p>
       </div>
-      {melding && MELDING[melding] && <div className={`melding ${melding === 'dubbel' ? 'fout' : 'goed'}`}>{MELDING[melding]}</div>}
+      {melding && MELDING[melding] && <div className={`melding ${melding === 'dubbel' || melding === 'mailfout' ? 'fout' : 'goed'}`}>{MELDING[melding]}</div>}
 
       {profile && <Profiel data={profile} zelf={false} />}
 
@@ -98,6 +101,12 @@ export default async function Medewerker({ params, searchParams }: { params: Pro
           {u.active && (
             <section className="kaart">
               <h2>Inloggen</h2>
+              {u.email && u.id !== me.id && (
+                <form action={stuurUitnodiging.bind(null, u.id)} className="stapel">
+                  <p className="klein zacht">Stuur {u.name.split(' ')[0]} een mail met een inloglink die drie dagen werkt.</p>
+                  <div><button className="knop licht klein">Uitnodiging mailen</button></div>
+                </form>
+              )}
               <CodeKnop action={maakCode.bind(null, u.id)} />
             </section>
           )}

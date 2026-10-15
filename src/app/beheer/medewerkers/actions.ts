@@ -1,9 +1,10 @@
 'use server'
 import { and, eq } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
-import { db, employeeTypes, sessions, talks, users } from '@/db'
+import { db, employeeTypes, organisations, sessions, talks, users, type User } from '@/db'
 import { loadVisibleEmployee } from '@/lib/access'
-import { requireAdmin, requireStaff } from '@/lib/auth'
+import { createLoginToken, requireAdmin, requireStaff } from '@/lib/auth'
+import { appUrl, sendMail } from '@/lib/mail'
 import { hashCode, newLoginCode } from '@/lib/crypto'
 
 type Role = 'beheerder' | 'begeleider' | 'medewerker'
@@ -35,17 +36,46 @@ async function readForm(orgId: string, fd: FormData) {
   return { name, email, role, typeId, supervisorId, internshipStart: d('stage_start'), internshipEnd: d('stage_einde') }
 }
 
+const WELKOM_DAGEN = 3
+
+// Welkomstmail met een inloglink die een paar dagen werkt. Geeft false terug als het versturen mislukt.
+async function mailWelkom(u: User): Promise<boolean> {
+  if (!u.email) return false
+  const [org] = await db.select().from(organisations).where(eq(organisations.id, u.orgId))
+  const token = await createLoginToken(u.id, WELKOM_DAGEN * 24 * 60)
+  try {
+    await sendMail(
+      { email: u.email, name: u.name },
+      `Welkom bij de gesprekstool van ${org.name}`,
+      `Hoi ${u.name.split(' ')[0]},\n\n${org.name} gebruikt deze tool om je voor te bereiden op je gesprekken en om elke week even terug te kijken.\n\nTik op deze link om in te loggen. De link werkt ${WELKOM_DAGEN} dagen en maar één keer.\n\n${appUrl(`/inloggen/link?t=${token}`)}\n\nDaarna kun je altijd weer inloggen via ${appUrl('/inloggen')} met dit mailadres.`,
+    )
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function voegToe(fd: FormData) {
   const me = await requireAdmin()
   const data = await readForm(me.orgId, fd)
   if (!data.name) redirect('/beheer/medewerkers?melding=naam')
+  let u: User
   try {
-    const [u] = await db.insert(users).values({ ...data, orgId: me.orgId }).returning()
-    redirect(`/beheer/medewerkers/${u.id}?melding=nieuw`)
+    ;[u] = await db.insert(users).values({ ...data, orgId: me.orgId }).returning()
   } catch (e) {
     if (e instanceof Error && /unique|duplicate/i.test(e.message)) redirect('/beheer/medewerkers?melding=dubbel')
     throw e
   }
+  const melding = !u.email ? 'nieuw' : (await mailWelkom(u)) ? 'nieuw-gemaild' : 'mailfout'
+  redirect(`/beheer/medewerkers/${u.id}?melding=${melding}`)
+}
+
+export async function stuurUitnodiging(id: string) {
+  const me = await requireAdmin()
+  const [u] = await db.select().from(users).where(and(eq(users.id, id), eq(users.orgId, me.orgId), eq(users.active, true)))
+  if (!u) redirect('/beheer/medewerkers')
+  const ok = await mailWelkom(u)
+  redirect(`/beheer/medewerkers/${id}?melding=${ok ? 'uitgenodigd' : 'mailfout'}`)
 }
 
 export async function bewerk(id: string, fd: FormData) {
