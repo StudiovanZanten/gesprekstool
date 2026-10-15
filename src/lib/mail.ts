@@ -21,6 +21,9 @@ export async function sendMail(to: { email: string; name: string }, subject: str
   if (!res.ok) throw new Error(`Mail versturen mislukt (${res.status})`)
 }
 
+// Zonder APP_URL gebruikt de tool het webadres dat Vercel zelf geeft.
 export function appUrl(path = ''): string {
-  return (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '') + path
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  const base = process.env.APP_URL || (vercel ? `https://${vercel}` : 'http://localhost:3000')
+  return base.replace(/\/$/, '') + path
 }
