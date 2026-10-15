@@ -18,7 +18,11 @@ export async function sendMail(to: { email: string; name: string }, subject: str
       textContent: text,
     }),
   })
-  if (!res.ok) throw new Error(`Mail versturen mislukt (${res.status})`)
+  if (!res.ok) {
+    console.error(`[mail] Brevo weigerde de mail (${res.status}): ${await res.text()}`)
+    throw new Error(`Mail versturen mislukt (${res.status})`)
+  }
+  console.log(`[mail] Brevo nam de mail aan (${res.status}).`)
 }
 
 // Zonder APP_URL gebruikt de tool het webadres dat Vercel zelf geeft.

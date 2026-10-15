@@ -31,6 +31,12 @@ async function list(orgId: string, name: string, kind: 'gesprek' | 'week', qs: S
   return ql.id
 }
 
+// Laat in het bouwlogboek zien welk adres is gebruikt, zonder het hele adres te tonen.
+function maskEmail(email: string) {
+  const [name, domain] = email.split('@')
+  return `${name.slice(0, 2)}***@${domain}`
+}
+
 async function main() {
   const adminName = process.env.SEED_ADMIN_NAME
   const adminEmail = process.env.SEED_ADMIN_EMAIL?.toLowerCase().trim()
@@ -39,9 +45,18 @@ async function main() {
     return
   }
 
+  const shown = maskEmail(adminEmail)
   const existing = await db.select().from(s.organisations).where(eq(s.organisations.name, ORG_NAME))
   if (existing.length) {
-    console.log(`${ORG_NAME} bestaat al, er is niets veranderd.`)
+    // Bestaat de organisatie al maar is de beheerder nog niet bekend (bijvoorbeeld een ander mailadres ingevuld),
+    // dan komt die er alsnog bij. Bestaande gebruikers blijven zoals ze zijn.
+    const [known] = await db.select().from(s.users).where(eq(s.users.email, adminEmail))
+    if (known) {
+      console.log(`${ORG_NAME} bestaat al, beheerder ${shown} is bekend. Er is niets veranderd.`)
+      return
+    }
+    await db.insert(s.users).values({ orgId: existing[0].id, name: adminName, email: adminEmail, role: 'beheerder' })
+    console.log(`${ORG_NAME} bestaat al, beheerder ${shown} is toegevoegd.`)
     return
   }
   const [org] = await db.insert(s.organisations).values({ name: ORG_NAME }).returning()
@@ -66,7 +81,7 @@ async function main() {
     .insert(s.users)
     .values({ orgId: org.id, name: adminName, email: adminEmail, role: 'beheerder' })
     .returning()
-  console.log(`Klaar: ${ORG_NAME} met beheerder ${adminName}.`)
+  console.log(`Klaar: ${ORG_NAME} met beheerder ${adminName} (${shown}).`)
 
   if (process.argv.includes('--demo')) {
     const [beg] = await db

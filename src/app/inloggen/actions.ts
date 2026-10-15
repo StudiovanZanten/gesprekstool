@@ -24,6 +24,9 @@ export async function vraagLinkAan(fd: FormData) {
         'Je inloglink',
         `Hoi ${u.name},\n\nTik op deze link om in te loggen. De link werkt 15 minuten en maar één keer.\n\n${appUrl(`/inloggen/link?t=${token}`)}\n\nHeb je dit niet zelf gevraagd? Dan kun je deze mail negeren.`,
       )
+    } else {
+      // Alleen in het logboek van Vercel, de bezoeker ziet altijd dezelfde melding.
+      console.log('[inloggen] Geen actieve gebruiker met dit mailadres, er is geen mail verstuurd.')
     }
   }
   // Altijd dezelfde melding, zodat niemand kan uitzoeken welke mailadressen bekend zijn.
