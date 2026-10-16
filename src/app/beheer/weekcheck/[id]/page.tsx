@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { notFound } from 'next/navigation'
-import { answers, db, weekchecks } from '@/db'
+import { db, weekchecks } from '@/db'
 import { Antwoord } from '@/components/Antwoord'
 import { loadVisibleEmployee, logAccess } from '@/lib/access'
 import { requireStaff } from '@/lib/auth'
-import { decrypt } from '@/lib/crypto'
+import { checkAnswers } from '@/lib/talks'
 import { weekLabel } from '@/lib/dates'
 import { hulpOpgepakt } from '../../actions'
 
@@ -19,11 +19,7 @@ export default async function Weekcheck({ params }: { params: Promise<{ id: stri
   if (!emp) notFound()
   await logAccess(me, emp.id, `weekcheck week ${c.week}`)
   if (!c.readAt) await db.update(weekchecks).set({ readAt: new Date(), readBy: me.id }).where(eq(weekchecks.id, c.id))
-  const shared = await db
-    .select()
-    .from(answers)
-    .where(and(eq(answers.weekcheckId, c.id), eq(answers.shared, true)))
-    .orderBy(asc(answers.position))
+  const shared = await checkAnswers([c.id], true)
   const needsHelp = c.helpRequested && !c.helpHandledAt
 
   return (
@@ -41,13 +37,14 @@ export default async function Weekcheck({ params }: { params: Promise<{ id: stri
         </section>
       )}
       <section className="kaart">
-        <h2>Gedeelde antwoorden</h2>
+        <h2>Antwoorden</h2>
         {shared.length ? (
           <div className="lijst">
             {shared.map((a) => (
               <div key={a.id} className="stapel" style={{ gap: 4 }}>
                 <span className="zacht klein">{a.questionText}</span>
-                <Antwoord a={{ answerType: a.answerType, value: decrypt(a.valueEnc), smiley: a.smiley, note: decrypt(a.noteEnc) }} />
+                <Antwoord a={a} />
+                {!a.shared && <span className="zacht klein">Alleen de smiley is zichtbaar. De uitleg is niet gedeeld.</span>}
               </div>
             ))}
           </div>

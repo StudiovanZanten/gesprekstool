@@ -10,7 +10,10 @@ export function Kop({ org, user }: { org: Organisation; user: User }) {
       <div className="kop-in">
         <Link href="/" className="merk">
           {org.logoUrl ? <img src={org.logoUrl} alt="" /> : null}
-          {org.name}
+          <span>
+            {org.name}
+            <span className="merk-sub">Samen Groeien</span>
+          </span>
         </Link>
         <nav className="nav" aria-label="Menu">
           {staff ? (

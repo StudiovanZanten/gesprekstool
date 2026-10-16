@@ -23,9 +23,22 @@ export async function bewaarOrganisatie(fd: FormData) {
       colorAccent: color(fd.get('kleur_accent'), org.colorAccent),
       talkMinutes: int(fd.get('duur'), 10, 240, org.talkMinutes),
       retentionMonths: int(fd.get('bewaar'), 1, 120, org.retentionMonths),
+      onePerDay: fd.get('perdag') === 'on',
     })
     .where(eq(organisations.id, me.orgId))
   redirect('/beheer/instellingen?melding=bewaard')
+}
+
+const soort = (v: FormDataEntryValue | null) => (v === 'smiley' || v === 'keuze' ? v : 'tekst')
+const onderdeel = (v: FormDataEntryValue | null) => (v === 'A' || v === 'B' || v === 'C' ? v : null)
+// Keuzes: één per regel, hooguit zes. "Anders" komt er vanzelf bij.
+function keuzes(v: FormDataEntryValue | null): string | null {
+  const list = String(v ?? '')
+    .split('\n')
+    .map((x) => x.trim().slice(0, 300))
+    .filter((x) => x && !/^anders\b/i.test(x))
+    .slice(0, 6)
+  return list.length ? JSON.stringify(list) : null
 }
 
 async function ownList(questionnaireId: string, orgId: string) {
@@ -39,13 +52,15 @@ export async function bewaarVraag(id: string, fd: FormData) {
   const [q] = await db.select().from(questions).where(eq(questions.id, id))
   if (!q) redirect('/beheer/instellingen')
   await ownList(q.questionnaireId, me.orgId)
-  const type = fd.get('soort') === 'smiley' ? 'smiley' : 'tekst'
+  const type = soort(fd.get('soort'))
   await db
     .update(questions)
     .set({
       text: String(fd.get('tekst') ?? '').trim() || q.text,
       topic: String(fd.get('onderwerp') ?? '').trim() || null,
       answerType: type,
+      section: onderdeel(fd.get('onderdeel')),
+      options: type === 'keuze' ? keuzes(fd.get('keuzes')) : null,
       allowNote: type === 'smiley',
       position: int(fd.get('volgorde'), 1, 999, q.position),
       active: fd.get('actief') === 'on',
@@ -61,12 +76,14 @@ export async function nieuweVraag(questionnaireId: string, fd: FormData) {
   const text = String(fd.get('tekst') ?? '').trim()
   if (!text) redirect(`/beheer/instellingen?lijst=${questionnaireId}`)
   const [{ m }] = await db.select({ m: max(questions.position) }).from(questions).where(eq(questions.questionnaireId, questionnaireId))
-  const type = fd.get('soort') === 'smiley' ? 'smiley' : 'tekst'
+  const type = soort(fd.get('soort'))
   await db.insert(questions).values({
     questionnaireId,
     text,
     topic: String(fd.get('onderwerp') ?? '').trim() || null,
     answerType: type,
+    section: onderdeel(fd.get('onderdeel')),
+    options: type === 'keuze' ? keuzes(fd.get('keuzes')) : null,
     allowNote: type === 'smiley',
     position: (m ?? 0) + 1,
   })

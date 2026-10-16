@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { and, eq } from 'drizzle-orm'
 import { db, organisations, weekchecks } from '@/db'
 import { Vragen } from '@/components/Vragen'
+import { optionsOf } from '@/lib/questions'
 import { isIntern } from '@/lib/access'
 import { requireUser } from '@/lib/auth'
 import { isoWeek } from '@/lib/dates'
@@ -25,7 +26,7 @@ export default async function Week({ searchParams }: { searchParams: Promise<{ k
       <main className="smal">
         <div className="kaart tint">
           <h1>Dank je wel!</h1>
-          <p>Je weekcheck is bewaard. Alleen jij kunt hem zien, tenzij je zelf iets deelt.</p>
+          <p>Je weekcheck is bewaard. Wat je gedeeld hebt, kan {hulpNaam} lezen. Je kunt het deze week nog aanpassen.</p>
           <div className="rij">
             <Link href="/mijn" className="knop">Terug naar start</Link>
             <Link href="/mijn/week" className="knop licht">Nog iets aanpassen</Link>
@@ -37,18 +38,22 @@ export default async function Week({ searchParams }: { searchParams: Promise<{ k
   return (
     <main className="smal">
       <h1>Mijn week</h1>
-      <p className="zacht">Week {week}. Wat je hier schrijft is van jou. Niemand ziet het, tenzij je het zelf deelt.</p>
+      <p className="zacht">Week {week}. Op het eind kies je of je de weekcheck deelt met {hulpNaam}.</p>
       <Vragen
         action={bewaarWeekcheck}
         klaarTekst="Klaar"
         hulpNaam={hulpNaam}
         hulpAan={check?.helpRequested}
+        deelAan={check?.shared ?? true}
         vragen={qs.map((q) => {
           const a = prev?.answers.find((x) => x.questionId === q.id)
           return {
             id: q.id,
             text: q.text,
             answerType: q.answerType,
+            section: q.section,
+            options: optionsOf(q),
+            smileyVisible: !!q.smileyVisibleFrom,
             allowNote: q.allowNote,
             helpSignal: q.helpSignal,
             value: a?.value ?? '',

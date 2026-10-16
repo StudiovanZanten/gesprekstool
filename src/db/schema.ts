@@ -16,7 +16,7 @@ import {
 export const roleEnum = pgEnum('rol', ['beheerder', 'begeleider', 'medewerker'])
 export const rhythmEnum = pgEnum('gespreksritme', ['weken', 'stage'])
 export const questionnaireKindEnum = pgEnum('soort_vragenlijst', ['gesprek', 'week'])
-export const answerTypeEnum = pgEnum('soort_antwoord', ['tekst', 'smiley'])
+export const answerTypeEnum = pgEnum('soort_antwoord', ['tekst', 'smiley', 'keuze'])
 export const talkStatusEnum = pgEnum('gespreksstatus', ['open', 'gepland', 'gedeeld', 'gevoerd'])
 
 const id = () => uuid('id').primaryKey().defaultRandom()
@@ -30,6 +30,8 @@ export const organisations = pgTable('organisaties', {
   colorAccent: text('kleur_accent').notNull().default('#b98b3e'),
   retentionMonths: integer('bewaartermijn_maanden').notNull().default(24),
   talkMinutes: integer('gespreksduur_minuten').notNull().default(30),
+  // Kiest iemand een moment, dan is die hele dag vol voor die gespreksvoerder.
+  onePerDay: boolean('een_gesprek_per_dag').notNull().default(true),
   weeklyQuestionnaireId: uuid('weekcheck_vragenlijst_id'),
   createdAt: created(),
 })
@@ -55,6 +57,13 @@ export const questions = pgTable(
     showPrevAgreements: boolean('toon_vorige_afspraken').notNull().default(false),
     helpSignal: boolean('hulp_seintje').notNull().default(false),
     isGoal: boolean('doelvraag').notNull().default(false),
+    // Onderdeel A, B of C van een gesprek (leeg bij de weekcheck).
+    section: text('onderdeel'),
+    // Bij meerkeuze: de keuzes als JSON lijst. "Anders, namelijk" komt er altijd vanzelf bij.
+    options: text('keuzes'),
+    // Vanaf dit moment is de smiley altijd zichtbaar voor de leidinggevende. De uitleg blijft privé tot hij gedeeld wordt.
+    // Antwoorden van daarvoor blijven privé, want die zijn gegeven toen dat nog zo was.
+    smileyVisibleFrom: timestamp('smiley_zichtbaar_vanaf', { withTimezone: true }),
     active: boolean('actief').notNull().default(true),
   },
   (t) => [index('vragen_lijst_idx').on(t.questionnaireId)],
@@ -121,6 +130,17 @@ export const talks = pgTable(
     attentionEnc: text('wat_vraagt_aandacht'),
     sharedAt: timestamp('gedeeld_op', { withTimezone: true }),
     heldAt: timestamp('gevoerd_op', { withTimezone: true }),
+    // Voorbereiding van de leidinggevende (versleutelde JSON). Niet zichtbaar voor de medewerker.
+    hostPrepEnc: text('voorbereiding_leiding'),
+    topicsEnc: text('onderwerpen'),
+    goalsEnc: text('ontwikkeldoelen'),
+    nextTalkDate: date('volgend_gesprek'),
+    reportById: uuid('verslag_door'),
+    // Bevestigen betekent: ontvangen en gelezen. Niet: akkoord.
+    employeeConfirmedAt: timestamp('gelezen_medewerker', { withTimezone: true }),
+    employeeReactionEnc: text('reactie_medewerker'),
+    hostConfirmedAt: timestamp('gelezen_leiding', { withTimezone: true }),
+    hostConfirmedBy: uuid('gelezen_leiding_door'),
     createdAt: created(),
   },
   (t) => [
@@ -147,6 +167,10 @@ export const agreements = pgTable('afspraken', {
   talkId: uuid('gesprek_id').notNull().references(() => talks.id, { onDelete: 'cascade' }),
   textEnc: text('afspraak').notNull(),
   reviewDate: date('terugkijkdatum'),
+  // Wie zorgt ervoor: medewerker, leidinggevende of samen.
+  owner: text('verantwoordelijke'),
+  // nog_niet, bezig of gelukt. "done" blijft gelijk aan status gelukt.
+  status: text('status').notNull().default('nog_niet'),
   done: boolean('gelukt').notNull().default(false),
   doneAt: timestamp('gelukt_op', { withTimezone: true }),
   createdAt: created(),
@@ -165,6 +189,8 @@ export const weekchecks = pgTable(
     helpHandledBy: uuid('hulp_opgepakt_door'),
     readAt: timestamp('gelezen_op', { withTimezone: true }),
     readBy: uuid('gelezen_door'),
+    // Keuze van de medewerker om de weekcheck te delen. Leeg: nog nooit gekozen.
+    shared: boolean('gedeeld'),
     createdAt: created(),
   },
   (t) => [uniqueIndex('weekcheck_uniek').on(t.userId, t.year, t.week)],

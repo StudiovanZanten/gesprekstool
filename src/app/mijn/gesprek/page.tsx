@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db, employeeTypes, users } from '@/db'
 import { Antwoord } from '@/components/Antwoord'
 import { Vragen } from '@/components/Vragen'
+import { optionsOf } from '@/lib/questions'
 import { requireUser } from '@/lib/auth'
 import { fmtDate, fmtTime, TZ } from '@/lib/dates'
 import {
@@ -66,6 +67,8 @@ export default async function Gesprek({ searchParams }: { searchParams: SP }) {
               id: q.id,
               text: q.text,
               answerType: q.answerType,
+              section: q.section,
+              options: optionsOf(q),
               allowNote: q.allowNote,
               helpSignal: false,
               prevAgreements: q.showPrevAgreements ? prevAgreements : undefined,
@@ -179,7 +182,7 @@ export default async function Gesprek({ searchParams }: { searchParams: SP }) {
             </div>
           ))
         ) : (
-          <p className="zacht">Er staan nog geen momenten open. Je krijgt een bericht zodra je kunt kiezen.</p>
+          <p className="zacht">Er staan voor dit gesprek nog geen momenten open, of ze zijn allemaal al gekozen. Je kunt de vragen hieronder alvast invullen. Je krijgt een bericht zodra je kunt kiezen.</p>
         )}
       </section>
 

@@ -30,6 +30,7 @@ p { margin: 0; }
 .kop-in { max-width: 960px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .merk { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--hoofd); font-family: var(--kop); font-size: 1.2rem; font-weight: 600; }
 .merk img { height: 40px; width: auto; }
+.merk-sub { display: block; font-family: var(--tekst); font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .nav a { text-decoration: none; padding: 8px 14px; border-radius: 999px; color: var(--inkt); font-weight: 600; font-size: .95rem; }
 .nav a:hover { background: var(--tint); }
@@ -106,6 +107,27 @@ textarea { min-height: 110px; resize: vertical; }
 .smileys input:checked + label { border-color: var(--hoofd); background: var(--tint); }
 .smileys input:focus-visible + label { outline: 3px solid var(--accent); }
 
+.keuzes { display: flex; flex-direction: column; gap: 8px; max-width: 560px; }
+.keuzes > span { display: flex; }
+.keuzes input { position: absolute; opacity: 0; pointer-events: none; }
+.keuzes label { margin: 0; font-weight: 600; cursor: pointer; display: flex; gap: 12px; align-items: center; width: 100%; padding: 12px 16px; border: 2px solid var(--lijn); border-radius: 20px; background: #fff; min-height: 52px; }
+.keuzes .letter { flex: none; width: 30px; height: 30px; border-radius: 999px; background: var(--tint); color: var(--hoofd); display: grid; place-items: center; font-weight: 800; }
+.keuzes input:checked + label { border-color: var(--hoofd); background: var(--tint); }
+.keuzes input:checked + label .letter { background: var(--hoofd); color: #fff; }
+.keuzes input:focus-visible + label { outline: 3px solid var(--accent); }
+.onderdeel { margin: 0; font-size: .82rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
+
+.afspraak { display: flex; flex-direction: column; gap: 10px; padding: 14px 0; border-top: 1px solid var(--lijn); }
+.tekstblok { white-space: pre-wrap; margin-top: 0; }
+.verslag .tabel th { width: 38%; }
+.verslag h3 { margin-bottom: 4px; }
+.afspraken { padding-left: 22px; margin-top: 0; }
+.afspraken li { margin-bottom: 10px; }
+
+.gevoel { display: flex; gap: 6px; flex-wrap: wrap; }
+.gevoel > span { display: flex; flex-direction: column; align-items: center; min-width: 44px; padding: 6px 4px; border-radius: 14px; background: var(--tint); font-size: .72rem; color: var(--zacht); }
+.gevoel > span b { font-size: 1.5rem; line-height: 1.1; }
+
 .vraag { display: flex; flex-direction: column; gap: 12px; }
 .vraag-kop { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
 .vraag-tekst { font-family: var(--kop); font-size: 1.3rem; color: var(--hoofd); }
@@ -147,6 +169,8 @@ table.tabel { width: 100%; border-collapse: collapse; }
   .smileys label span { font-size: 1.7rem; }
 }
 @media print {
-  .kop, .nav, .knop, .lees { display: none !important; }
+  .kop, .nav, .knop, .lees, .geen-print { display: none !important; }
   body { background: #fff; }
+  .kaart { box-shadow: none !important; border: 0 !important; padding: 0 !important; }
+  main { padding: 0 !important; }
 }

@@ -2,6 +2,7 @@ import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { answers, db, type Question } from '@/db'
 import { encrypt } from './crypto'
+import { ANDERS, optionsOf } from './questions'
 
 // Slaat de antwoorden uit een vragenformulier op. De vraagtekst wordt meebewaard,
 // zodat oude antwoorden kloppen als de vraag later wordt aangepast.
@@ -16,8 +17,13 @@ export async function saveAnswers(opts: {
 }) {
   const { orgId, userId, talkId, weekcheckId, questions, fd } = opts
   for (const q of questions) {
-    const value = String(fd.get(`a-${q.id}`) ?? '').trim().slice(0, 5000)
-    const note = String(fd.get(`n-${q.id}`) ?? '').trim().slice(0, 5000)
+    let value = String(fd.get(`a-${q.id}`) ?? '').trim().slice(0, 5000)
+    let note = String(fd.get(`n-${q.id}`) ?? '').trim().slice(0, 5000)
+    if (q.answerType === 'keuze') {
+      // Alleen een bestaande keuze telt. Bij "Anders" hoort de eigen tekst.
+      if (value !== ANDERS && !optionsOf(q).includes(value)) value = ''
+      if (value !== ANDERS) note = ''
+    }
     const sRaw = Number(fd.get(`s-${q.id}`))
     const smiley = sRaw >= 1 && sRaw <= 5 ? sRaw : null
     const target = talkId ? eq(answers.talkId, talkId) : eq(answers.weekcheckId, weekcheckId!)

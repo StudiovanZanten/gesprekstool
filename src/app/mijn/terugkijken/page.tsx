@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { and, desc, eq } from 'drizzle-orm'
 import { db, slots, talks } from '@/db'
 import { Antwoord } from '@/components/Antwoord'
@@ -31,6 +32,7 @@ export default async function Terugkijken() {
                 <summary>
                   <strong>{fmtDateLong(slot?.startsAt ?? talk.heldAt)}</strong>, {talk.label}
                 </summary>
+                <p><Link href={`/verslag/${talk.id}`}>Het hele verslag lezen</Link></p>
                 {talk.goodEnc && (<><h3>Wat gaat goed</h3><p>{decrypt(talk.goodEnc)}</p></>)}
                 {talk.attentionEnc && (<><h3>Wat vraagt aandacht</h3><p>{decrypt(talk.attentionEnc)}</p></>)}
                 <h3>Afspraken</h3>

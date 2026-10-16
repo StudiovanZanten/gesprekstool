@@ -5,6 +5,8 @@ import { accessLog, db, employeeTypes, slots, talks, users } from '@/db'
 import { CodeKnop } from '@/components/CodeKnop'
 import { Profiel } from '@/components/Profiel'
 import { Dossier } from '@/components/Dossier'
+import { Gevoel } from '@/components/Gevoel'
+import { lastHeldTalk } from '@/lib/talks'
 import { profileData } from '@/lib/profile'
 import { MedewerkerVelden } from '@/components/MedewerkerVelden'
 import { canViewEmployee, logAccess } from '@/lib/access'
@@ -52,6 +54,7 @@ export default async function Medewerker({ params, searchParams }: { params: Pro
 
   const profile = canView && u.role === 'medewerker' ? await profileData(u.id, true) : null
   if (profile) await logAccess(me, u.id, 'profiel')
+  const lastTalk = profile ? await lastHeldTalk(u.id) : null
 
   return (
     <main>
@@ -61,6 +64,7 @@ export default async function Medewerker({ params, searchParams }: { params: Pro
       </div>
       {melding && MELDING[melding] && <div className={`melding ${melding === 'dubbel' || melding === 'mailfout' ? 'fout' : 'goed'}`}>{MELDING[melding]}</div>}
 
+      {profile && <Gevoel employeeId={u.id} since={lastTalk?.heldAt ?? null} zelf={false} titel={`Hoe gaat het met ${u.name.split(' ')[0]}`} />}
       {profile && <Profiel data={profile} zelf={false} />}
       {profile && <Dossier employeeId={u.id} />}
 

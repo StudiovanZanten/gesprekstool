@@ -46,7 +46,7 @@ async function mailWelkom(u: User): Promise<boolean> {
   try {
     await sendMail(
       { email: u.email, name: u.name },
-      `Welkom bij de gesprekstool van ${org.name}`,
+      `Welkom bij Samen Groeien van ${org.name}`,
       `Hoi ${u.name.split(' ')[0]},\n\n${org.name} gebruikt deze tool om je voor te bereiden op je gesprekken en om elke week even terug te kijken.\n\nTik op deze link om in te loggen. De link werkt ${WELKOM_DAGEN} dagen en maar één keer.\n\n${appUrl(`/inloggen/link?t=${token}`)}\n\nDaarna kun je altijd weer inloggen via ${appUrl('/inloggen')} met dit mailadres.`,
     )
     return true

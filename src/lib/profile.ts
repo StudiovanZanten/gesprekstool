@@ -37,6 +37,7 @@ export async function profileData(employeeId: string, onlyShared: boolean) {
   }
 
   return {
+    devGoals: held[0] ? decrypt(held[0].talk.goalsEnc) : '',
     open: allAgreements.filter((a) => !a.done),
     done: allAgreements.filter((a) => a.done),
     goals,

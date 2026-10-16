@@ -1,10 +1,11 @@
 import 'server-only'
-import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, ne } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne } from 'drizzle-orm'
 import {
   agreements,
   answers,
   db,
   employeeTypes,
+  organisations,
   questions,
   slots,
   talkWeeks,
@@ -15,17 +16,19 @@ import {
   type User,
 } from '@/db'
 import { decrypt } from './crypto'
-import { addDays, isoWeek, mondayOfWeek, roundLabel, todayStr } from './dates'
+import { bySection } from './questions'
+import { addDays, isoWeek, mondayOfWeek, roundLabel, todayStr, TZ } from './dates'
 
 export const INVITE_DAYS_BEFORE = 21
 
 export async function activeQuestions(questionnaireId: string | null) {
   if (!questionnaireId) return []
-  return db
+  const rows = await db
     .select()
     .from(questions)
     .where(and(eq(questions.questionnaireId, questionnaireId), eq(questions.active, true)))
     .orderBy(asc(questions.position))
+  return bySection(rows)
 }
 
 // Maakt gesprekken aan voor gespreksrondes die binnen drie weken beginnen. Eén gesprek per ronde, ook als die meerdere weken duurt.
@@ -101,7 +104,17 @@ export async function freeSlotsFor(employee: User, talk: Talk) {
     if (!employee.supervisorId) return []
     conds.push(eq(slots.hostId, employee.supervisorId))
   }
-  return db.select().from(slots).where(and(...conds)).orderBy(asc(slots.startsAt))
+  const free = await db.select().from(slots).where(and(...conds)).orderBy(asc(slots.startsAt))
+  const [org] = await db.select().from(organisations).where(eq(organisations.id, employee.orgId))
+  if (!org?.onePerDay || !free.length) return free
+  // Eén gesprek per dag: een dag waarop de gespreksvoerder al een gesprek heeft, is vol.
+  const day = (d: Date) => d.toLocaleDateString('sv-SE', { timeZone: TZ })
+  const booked = await db
+    .select({ hostId: slots.hostId, startsAt: slots.startsAt })
+    .from(slots)
+    .where(and(eq(slots.orgId, employee.orgId), isNotNull(slots.talkId), ne(slots.talkId, talk.id), gt(slots.startsAt, now)))
+  const full = new Set(booked.map((b) => `${b.hostId} ${day(b.startsAt)}`))
+  return free.filter((s) => !full.has(`${s.hostId} ${day(s.startsAt)}`))
 }
 
 export async function lastHeldTalk(employeeId: string, before?: Date) {
@@ -109,6 +122,15 @@ export async function lastHeldTalk(employeeId: string, before?: Date) {
   if (before) conds.push(lt(talks.heldAt, before))
   const [t] = await db.select().from(talks).where(and(...conds)).orderBy(desc(talks.heldAt)).limit(1)
   return t ?? null
+}
+
+// Voorbereiding van de leidinggevende, ontsleuteld.
+export function hostPrep(talk: Talk): Record<string, string> {
+  try {
+    return JSON.parse(decrypt(talk.hostPrepEnc) || '{}')
+  } catch {
+    return {}
+  }
 }
 
 export async function agreementsOf(talkId: string) {
@@ -120,7 +142,7 @@ export type PlainAnswer = {
   id: string
   questionId: string | null
   questionText: string
-  answerType: 'tekst' | 'smiley'
+  answerType: 'tekst' | 'smiley' | 'keuze'
   value: string
   smiley: number | null
   note: string
@@ -157,12 +179,28 @@ export async function weekchecksSince(employeeId: string, since: Date | null, on
     .where(and(...conds))
     .orderBy(desc(weekchecks.year), desc(weekchecks.week))
   if (!checks.length) return []
-  const aConds = [inArray(answers.weekcheckId, checks.map((c) => c.id))]
-  if (onlyShared) aConds.push(eq(answers.shared, true))
-  const rows = await db.select().from(answers).where(and(...aConds)).orderBy(asc(answers.position))
+  const visible = await checkAnswers(checks.map((c) => c.id), onlyShared)
   return checks
-    .map((c) => ({ ...c, answers: rows.filter((r) => r.weekcheckId === c.id).map(plain) }))
+    .map((c) => ({ ...c, answers: visible.filter((r) => r.weekcheckId === c.id) }))
     .filter((c) => !onlyShared || c.answers.length > 0)
+}
+
+// Antwoorden van weekchecks. Met onlyShared (voor de leidinggevende): wat gedeeld is, plus de smiley bij vragen
+// waar die altijd zichtbaar is, zonder uitleg.
+export async function checkAnswers(checkIds: string[], onlyShared: boolean) {
+  if (!checkIds.length) return []
+  const rows = await db
+    .select({ a: answers, from: questions.smileyVisibleFrom })
+    .from(answers)
+    .leftJoin(questions, eq(questions.id, answers.questionId))
+    .where(inArray(answers.weekcheckId, checkIds))
+    .orderBy(asc(answers.position))
+  return rows.flatMap(({ a, from }) => {
+    const p = { ...plain(a), weekcheckId: a.weekcheckId }
+    if (!onlyShared || a.shared) return [p]
+    if (from && a.updatedAt >= from && a.smiley != null) return [{ ...p, value: '', note: '' }]
+    return []
+  })
 }
 
 export const SMILEYS = [

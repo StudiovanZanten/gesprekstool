@@ -1,31 +1,41 @@
+import Link from 'next/link'
 import { fmtDateLong, todayStr } from '@/lib/dates'
 import type { profileData } from '@/lib/profile'
-import { wisselAfspraak } from '@/app/profiel/actions'
+import { EIGENAREN } from '@/lib/questions'
+import { zetVoortgang } from '@/app/profiel/actions'
+import { StatusKeuze } from './StatusKeuze'
 
 type Data = Awaited<ReturnType<typeof profileData>>
 
-// Het profiel: lopende afspraken, doelen en alle eerdere gesprekken op één pagina.
+// Het profiel: ontwikkelplan met afspraken, doelen en alle eerdere gesprekken op één pagina.
 export function Profiel({ data, zelf }: { data: Data; zelf: boolean }) {
   const today = todayStr()
+  const wie = (o: string | null) => (!o ? '' : zelf ? { medewerker: 'Jij', leidinggevende: 'Je leidinggevende', samen: 'Samen' }[o] : EIGENAREN[o])
   return (
     <>
       <div className="raster">
         <section className="kaart">
-          <h2>{zelf ? 'Mijn afspraken' : 'Lopende afspraken'}</h2>
+          <h2>{zelf ? 'Mijn ontwikkelplan' : 'Ontwikkelplan'}</h2>
+          {data.devGoals && (
+            <div className="melding">
+              <strong>Ontwikkeldoelen</strong>
+              <p className="tekstblok" style={{ marginBottom: 0 }}>{data.devGoals}</p>
+            </div>
+          )}
           {data.open.length ? (
             <div className="lijst">
               {data.open.map((a) => (
-                <form key={a.id} action={wisselAfspraak.bind(null, a.id)} className="rij tussen">
+                <div key={a.id} className="rij tussen">
                   <span>
                     {a.text}
                     <br />
                     <span className="zacht klein">
-                      {a.reviewDate ? `Terugkijken op ${fmtDateLong(a.reviewDate)}` : a.talkLabel}
+                      {[wie(a.owner), a.reviewDate ? `streefdatum ${fmtDateLong(a.reviewDate)}` : a.talkLabel].filter(Boolean).join(', ')}
                     </span>{' '}
                     {a.reviewDate && a.reviewDate < today && <span className="pil let-op">Datum is voorbij</span>}
                   </span>
-                  <button className="knop licht klein">Gelukt</button>
-                </form>
+                  <StatusKeuze key={a.status} action={zetVoortgang.bind(null, a.id)} status={a.status} label={`Voortgang: ${a.text}`} />
+                </div>
               ))}
             </div>
           ) : (
@@ -36,10 +46,10 @@ export function Profiel({ data, zelf }: { data: Data; zelf: boolean }) {
               <summary className="klein">Gelukt ({data.done.length})</summary>
               <div className="lijst">
                 {data.done.map((a) => (
-                  <form key={a.id} action={wisselAfspraak.bind(null, a.id)} className="rij tussen">
+                  <div key={a.id} className="rij tussen">
                     <span>✓ {a.text}</span>
-                    <button className="knop licht klein">Toch nog niet</button>
-                  </form>
+                    <StatusKeuze key={a.status} action={zetVoortgang.bind(null, a.id)} status={a.status} label={`Voortgang: ${a.text}`} />
+                  </div>
                 ))}
               </div>
             </details>
@@ -62,26 +72,28 @@ export function Profiel({ data, zelf }: { data: Data; zelf: boolean }) {
           )}
         </section>
       </div>
-      <section className="stapel">
+      <section className="kaart">
         <h2>{zelf ? 'Mijn gesprekken' : 'Eerdere gesprekken'}</h2>
-        {data.held.length === 0 && <p className="zacht">Nog geen gesprekken gevoerd.</p>}
-        {data.held.map((t) => (
-          <details key={t.id} className="kaart">
-            <summary>
-              <strong>{fmtDateLong(t.date)}</strong>, {t.label}
-            </summary>
-            <h3>Wat gaat goed</h3>
-            <p>{t.good || 'Niet ingevuld.'}</p>
-            <h3>Wat vraagt aandacht</h3>
-            <p>{t.attention || 'Niet ingevuld.'}</p>
-            <h3>Afspraken</h3>
-            {t.agreements.length ? (
-              <ul>{t.agreements.map((a) => <li key={a.id}>{a.done ? '✓ ' : ''}{a.text}</li>)}</ul>
-            ) : (
-              <p className="zacht">Geen afspraken.</p>
-            )}
-          </details>
-        ))}
+        {data.held.length === 0 ? (
+          <p className="zacht">Nog geen gesprekken gevoerd.</p>
+        ) : (
+          <div className="lijst">
+            {data.held.map((t) => (
+              <div key={t.id} className="rij tussen">
+                <span>
+                  <strong>{fmtDateLong(t.date)}</strong>, {t.label}
+                  <br />
+                  {t.employeeConfirmedAt ? (
+                    <span className="pil goed">Gelezen</span>
+                  ) : (
+                    <span className="pil let-op">{zelf ? 'Nog lezen' : 'Nog niet gelezen door medewerker'}</span>
+                  )}
+                </span>
+                <Link href={`/verslag/${t.id}`} className={`knop klein ${zelf && !t.employeeConfirmedAt ? '' : 'licht'}`}>Verslag</Link>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </>
   )

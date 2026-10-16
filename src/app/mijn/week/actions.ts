@@ -1,7 +1,7 @@
 'use server'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
-import { db, organisations, users, weekchecks } from '@/db'
+import { answers, db, organisations, users, weekchecks } from '@/db'
 import { saveAnswers } from '@/lib/answers'
 import { requireUser } from '@/lib/auth'
 import { isoWeek } from '@/lib/dates'
@@ -24,6 +24,14 @@ export async function bewaarWeekcheck(fd: FormData) {
     .from(weekchecks)
     .where(and(eq(weekchecks.userId, user.id), eq(weekchecks.year, year), eq(weekchecks.week, week)))
   await saveAnswers({ orgId: user.orgId, userId: user.id, weekcheckId: check.id, questions: qs, fd, shareHelp: help })
+  // Standaard gedeeld. Zet de medewerker het uit, dan blijft alles privé (behalve een hulpvraag).
+  const share = fd.get('delen') === 'on'
+  await db.update(weekchecks).set({ shared: share }).where(eq(weekchecks.id, check.id))
+  await db.update(answers).set({ shared: share }).where(and(eq(answers.weekcheckId, check.id), eq(answers.userId, user.id)))
+  if (help && !share) {
+    const helpIds = qs.filter((q) => q.helpSignal).map((q) => q.id)
+    if (helpIds.length) await db.update(answers).set({ shared: true }).where(and(eq(answers.weekcheckId, check.id), inArray(answers.questionId, helpIds)))
+  }
   if (help && !check.helpRequested) {
     await db.update(weekchecks).set({ helpRequested: true, helpHandledAt: null }).where(eq(weekchecks.id, check.id))
     // Seintje aan de stagebegeleider (stagiaires) of aan de beheerders. Zonder inhoud in de mail.

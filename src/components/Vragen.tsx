@@ -1,11 +1,15 @@
 'use client'
 import { useState } from 'react'
 import { LeesVoor } from './LeesVoor'
+import { ANDERS, ONDERDELEN } from '@/lib/questions'
 
 export type VraagProps = {
   id: string
   text: string
-  answerType: 'tekst' | 'smiley'
+  answerType: 'tekst' | 'smiley' | 'keuze'
+  section?: string | null
+  options?: string[]
+  smileyVisible?: boolean
   allowNote: boolean
   helpSignal: boolean
   prevAgreements?: string[]
@@ -29,14 +33,18 @@ export function Vragen({
   klaarTekst,
   hulpNaam,
   hulpAan,
+  deelAan,
 }: {
   vragen: VraagProps[]
   action: (fd: FormData) => void | Promise<void>
   klaarTekst: string
   hulpNaam?: string
   hulpAan?: boolean
+  // Weekcheck: schakelaar om alles te delen. Staat standaard aan.
+  deelAan?: boolean
 }) {
   const [stap, setStap] = useState(0)
+  const [keuze, setKeuze] = useState<Record<string, string>>(() => Object.fromEntries(vragen.map((v) => [v.id, v.value])))
   const laatste = stap === vragen.length - 1
   return (
     <form action={action} className="kaart">
@@ -48,6 +56,11 @@ export function Vragen({
       </p>
       {vragen.map((v, i) => (
         <div key={v.id} className="vraag" hidden={i !== stap}>
+          {v.section && ONDERDELEN[v.section] && (
+            <p className="onderdeel">
+              {v.section}. {ONDERDELEN[v.section]}
+            </p>
+          )}
           <div className="vraag-kop">
             <label htmlFor={`a-${v.id}`} className="vraag-tekst">
               {v.text}
@@ -64,7 +77,34 @@ export function Vragen({
               )}
             </div>
           )}
-          {v.answerType === 'smiley' ? (
+          {v.answerType === 'keuze' ? (
+            <>
+              <div className="keuzes" role="radiogroup" aria-label={v.text}>
+                {[...(v.options ?? []), ANDERS].map((o, j) => (
+                  <span key={o}>
+                    <input
+                      type="radio"
+                      name={`a-${v.id}`}
+                      id={`k-${v.id}-${j}`}
+                      value={o}
+                      checked={keuze[v.id] === o}
+                      onChange={() => setKeuze({ ...keuze, [v.id]: o })}
+                    />
+                    <label htmlFor={`k-${v.id}-${j}`}>
+                      <span className="letter">{String.fromCharCode(65 + j)}</span>
+                      {o === ANDERS ? 'Anders, namelijk...' : o}
+                    </label>
+                  </span>
+                ))}
+              </div>
+              {keuze[v.id] === ANDERS && (
+                <div className="veld">
+                  <label htmlFor={`n-${v.id}`} className="klein">Wat dan?</label>
+                  <textarea id={`n-${v.id}`} name={`n-${v.id}`} defaultValue={v.note} autoFocus />
+                </div>
+              )}
+            </>
+          ) : v.answerType === 'smiley' ? (
             <>
               <div className="smileys" role="radiogroup" aria-label={v.text}>
                 {SMILEYS.map((s) => (
@@ -77,6 +117,9 @@ export function Vragen({
                   </span>
                 ))}
               </div>
+              {v.smileyVisible && (
+                <p className="zacht klein">{hulpNaam ? `${hulpNaam[0].toUpperCase()}${hulpNaam.slice(1)}` : 'Je leidinggevende'} ziet altijd welke smiley je kiest.</p>
+              )}
               {v.allowNote && (
                 <div className="veld">
                   <label htmlFor={`a-${v.id}`} className="klein">
@@ -92,11 +135,17 @@ export function Vragen({
           {v.helpSignal && hulpNaam && (
             <label className="schakel">
               <input type="checkbox" name="hulp" defaultChecked={hulpAan} />
-              Ja, laat {hulpNaam} dit nu al weten. Dan wordt dit antwoord meteen gedeeld.
+              Ik wil graag hulp. Laat {hulpNaam} dit nu al weten. Dan wordt dit antwoord meteen gedeeld.
             </label>
           )}
         </div>
       ))}
+      {deelAan !== undefined && hulpNaam && (
+        <label className="schakel" hidden={!laatste}>
+          <input type="checkbox" name="delen" defaultChecked={deelAan} />
+          Deel deze weekcheck met {hulpNaam}. Zet dit uit als je hem liever voor jezelf houdt.
+        </label>
+      )}
       <div className="rij tussen">
         <div className="rij">
           {stap > 0 && (

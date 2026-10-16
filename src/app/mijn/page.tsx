@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { and, eq } from 'drizzle-orm'
-import { db, weekchecks } from '@/db'
+import { and, eq, isNull } from 'drizzle-orm'
+import { db, talks, weekchecks } from '@/db'
 import { IconBack, IconTalk, IconWeek } from '@/components/icons'
 import { requireUser } from '@/lib/auth'
 import { isoWeek } from '@/lib/dates'
@@ -15,6 +15,10 @@ export default async function Mijn() {
     .where(and(eq(weekchecks.userId, user.id), eq(weekchecks.year, year), eq(weekchecks.week, week)))
   const talk = await currentTalk(user)
   const slot = talk ? await slotForTalk(talk.id) : null
+  const toRead = await db
+    .select({ id: talks.id })
+    .from(talks)
+    .where(and(eq(talks.employeeId, user.id), eq(talks.status, 'gevoerd'), isNull(talks.employeeConfirmedAt)))
   const voornaam = user.name.split(' ')[0]
   return (
     <main>
@@ -32,10 +36,11 @@ export default async function Mijn() {
           <strong>Mijn gesprek</strong>
           <span className="zacht">{talk ? talk.label : 'Er staat nu geen gesprek klaar.'}</span>
         </Link>
-        <Link href="/mijn/profiel" className="tegel">
+        <Link href={toRead.length === 1 ? `/verslag/${toRead[0].id}` : '/mijn/profiel'} className="tegel">
+          {toRead.length > 0 && <span className="stip">Verslag lezen</span>}
           <span className="icoon"><IconBack /></span>
           <strong>Mijn profiel</strong>
-          <span className="zacht">Je afspraken, je doelen en eerdere gesprekken.</span>
+          <span className="zacht">Je ontwikkelplan, je doelen en je verslagen.</span>
         </Link>
       </div>
     </main>

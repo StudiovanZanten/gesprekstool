@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { asc, eq } from 'drizzle-orm'
 import { db, employeeTypes, organisations, questionnaires, questions } from '@/db'
 import { requireAdmin } from '@/lib/auth'
+import { bySection, ONDERDELEN, optionsOf } from '@/lib/questions'
 import { bewaarOrganisatie, bewaarType, bewaarVraag, nieuweVraag, nieuwType } from './actions'
 
 export default async function Instellingen({ searchParams }: { searchParams: Promise<{ lijst?: string; melding?: string }> }) {
@@ -11,7 +12,25 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
   const types = await db.select().from(employeeTypes).where(eq(employeeTypes.orgId, me.orgId)).orderBy(asc(employeeTypes.position))
   const lists = await db.select().from(questionnaires).where(eq(questionnaires.orgId, me.orgId)).orderBy(asc(questionnaires.createdAt))
   const selected = lists.find((l) => l.id === sp.lijst)
-  const qs = selected ? await db.select().from(questions).where(eq(questions.questionnaireId, selected.id)).orderBy(asc(questions.position)) : []
+  const qs = selected ? bySection(await db.select().from(questions).where(eq(questions.questionnaireId, selected.id)).orderBy(asc(questions.position))) : []
+  const isTalk = selected?.kind === 'gesprek'
+  const activeCount = qs.filter((q) => q.active).length
+  const soortKeuze = (id: string, value: string) => (
+    <select id={id} name="soort" defaultValue={value}>
+      <option value="tekst">Open vraag</option>
+      <option value="smiley">Smiley met toelichting</option>
+      <option value="keuze">Meerkeuze met Anders</option>
+    </select>
+  )
+  const onderdeelKeuze = (id: string, value: string) => (
+    <div className="veld">
+      <label htmlFor={id} className="klein">Onderdeel</label>
+      <select id={id} name="onderdeel" defaultValue={value}>
+        <option value="">Geen</option>
+        {Object.entries(ONDERDELEN).map(([k, v]) => <option key={k} value={k}>{k}. {v}</option>)}
+      </select>
+    </div>
+  )
 
   return (
     <main>
@@ -28,6 +47,7 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
           <div className="veld"><label htmlFor="duur">Duur van een gesprek (minuten)</label><input id="duur" name="duur" type="number" min={10} max={240} defaultValue={org.talkMinutes} /></div>
           <div className="veld"><label htmlFor="bewaar">Gegevens bewaren na uit dienst (maanden)</label><input id="bewaar" name="bewaar" type="number" min={1} max={120} defaultValue={org.retentionMonths} /></div>
         </div>
+        <label className="schakel"><input type="checkbox" name="perdag" defaultChecked={org.onePerDay} /> Eén gesprek per dag: kiest iemand een moment, dan is die dag vol</label>
         <div><button className="knop">Bewaren</button></div>
       </form>
 
@@ -66,6 +86,7 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
           <>
             <p className="zacht klein">
               Pas je een vraag aan, dan blijft bij eerdere antwoorden de oude vraag staan. Zet een vraag uit in plaats van hem weg te halen.
+              {isTalk && ` Er staan ${activeCount} vragen aan. Advies: 10 tot 15, dan duurt invullen hooguit tien minuten.`}
             </p>
             <div className="lijst">
               {qs.map((q) => (
@@ -78,12 +99,14 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
                     <div className="veld"><label htmlFor={`o-${q.id}`} className="klein">Onderwerp</label><input id={`o-${q.id}`} name="onderwerp" type="text" defaultValue={q.topic ?? ''} /></div>
                     <div className="veld">
                       <label htmlFor={`s-${q.id}`} className="klein">Antwoord</label>
-                      <select id={`s-${q.id}`} name="soort" defaultValue={q.answerType}>
-                        <option value="tekst">Tekst</option>
-                        <option value="smiley">Smiley met toelichting</option>
-                      </select>
+                      {soortKeuze(`s-${q.id}`, q.answerType)}
                     </div>
+                    {isTalk && onderdeelKeuze(`d-${q.id}`, q.section ?? '')}
                     <div className="veld"><label htmlFor={`v-${q.id}`} className="klein">Volgorde</label><input id={`v-${q.id}`} name="volgorde" type="number" defaultValue={q.position} /></div>
+                    {q.answerType === 'keuze' && <div className="veld" style={{ gridColumn: '1 / -1' }}>
+                      <label htmlFor={`k-${q.id}`} className="klein">Keuzes bij meerkeuze, één per regel. &quot;Anders, namelijk&quot; komt er vanzelf bij.</label>
+                      <textarea id={`k-${q.id}`} name="keuzes" defaultValue={optionsOf(q).join('\n')} style={{ minHeight: 60 }} />
+                    </div>}
                   </div>
                   <div className="rij">
                     <label className="schakel"><input type="checkbox" name="actief" defaultChecked={q.active} /> Vraag staat aan</label>
@@ -100,7 +123,12 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
                 <div className="veld"><label htmlFor="nieuw-onderwerp" className="klein">Onderwerp</label><input id="nieuw-onderwerp" name="onderwerp" type="text" /></div>
                 <div className="veld">
                   <label htmlFor="nieuw-soort" className="klein">Antwoord</label>
-                  <select id="nieuw-soort" name="soort"><option value="tekst">Tekst</option><option value="smiley">Smiley met toelichting</option></select>
+                  {soortKeuze('nieuw-soort', 'tekst')}
+                </div>
+                {isTalk && onderdeelKeuze('nieuw-onderdeel', '')}
+                <div className="veld" style={{ gridColumn: '1 / -1' }}>
+                  <label htmlFor="nieuw-keuzes" className="klein">Keuzes bij meerkeuze, één per regel</label>
+                  <textarea id="nieuw-keuzes" name="keuzes" style={{ minHeight: 60 }} />
                 </div>
               </div>
               <div><button className="knop klein">Toevoegen</button></div>

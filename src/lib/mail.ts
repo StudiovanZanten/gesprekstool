@@ -12,7 +12,7 @@ export async function sendMail(to: { email: string; name: string }, subject: str
     method: 'POST',
     headers: { 'api-key': key, 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify({
-      sender: { email: process.env.MAIL_FROM, name: process.env.MAIL_FROM_NAME || 'Gesprekstool' },
+      sender: { email: process.env.MAIL_FROM, name: process.env.MAIL_FROM_NAME || 'Samen Groeien' },
       to: [to],
       subject,
       textContent: text,

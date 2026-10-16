@@ -1,4 +1,4 @@
-import { and, asc, eq, gt } from 'drizzle-orm'
+import { and, asc, eq, gt, isNull } from 'drizzle-orm'
 import { db, employeeTypes, organisations, slots, talkWeeks, talks, users } from '@/db'
 import { requireStaff } from '@/lib/auth'
 import { DatumMetWeek } from '@/components/DatumMetWeek'
@@ -35,6 +35,19 @@ export default async function Planning({ searchParams }: { searchParams: Promise
   const upcoming = weeks.filter((w) => w.year > now.year || (w.year === now.year && (w.weekEnd ?? w.week) >= now.week))
   const weekTypes = (y: number, w: number) =>
     weeks.filter((x) => x.year === y && x.week <= w && w <= (x.weekEnd ?? x.week)).map((x) => types.find((t) => t.id === x.typeId)?.name).filter((n): n is string => !!n)
+  // Vrije momenten per gespreksronde, zodat je ziet of medewerkers iets kunnen kiezen.
+  const freeAll = await db
+    .select({ startsAt: slots.startsAt })
+    .from(slots)
+    .where(and(eq(slots.orgId, me.orgId), isNull(slots.talkId), gt(slots.startsAt, new Date())))
+  const freeIn = (r: (typeof weeks)[number]) => {
+    const from = mondayOfWeek(r.year, r.week)
+    const to = addDays(mondayOfWeek(r.year, r.weekEnd ?? r.week), 7)
+    return freeAll.filter((f) => {
+      const d = f.startsAt.toLocaleDateString('sv-SE', { timeZone: TZ })
+      return d >= from && d < to
+    }).length
+  }
   const upcomingUnique = [...new Map(upcoming.map((w) => [`${w.year}-${w.week}`, w])).values()]
 
   return (
@@ -79,7 +92,12 @@ export default async function Planning({ searchParams }: { searchParams: Promise
                               <span>tot en met</span>
                               <input name="tot" type="number" min={1} max={53} inputMode="numeric" defaultValue={r?.weekEnd ?? r?.week ?? ''} aria-label={`Gesprek ${i + 1} ${y}, tot en met week`} />
                             </label>
-                            {r && <span className="hint ronde-uitleg">{roundLabel(r.year, r.week, r.weekEnd)}</span>}
+                            {r && (
+                              <span className="hint ronde-uitleg">
+                                {roundLabel(r.year, r.week, r.weekEnd)}.{' '}
+                                {freeIn(r) ? `${freeIn(r)} vrije momenten.` : <strong>Nog geen vrije momenten, medewerkers kunnen nog niets kiezen.</strong>}
+                              </span>
+                            )}
                           </div>
                         )
                       })}
