@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { and, asc, desc, eq, inArray, isNull, ne } from 'drizzle-orm'
-import { answers, db, slots, talks, weekchecks } from '@/db'
+import { answers, db, slots, talkWeeks, talks, weekchecks } from '@/db'
 import { Antwoord } from '@/components/Antwoord'
 import { employeesVisibleTo } from '@/lib/access'
 import { requireStaff } from '@/lib/auth'
@@ -29,14 +29,25 @@ export default async function Beheer() {
 
   const open = ids.length
     ? await db
-        .select({ talk: talks, slot: slots })
+        .select({ talk: talks, slot: slots, tw: talkWeeks })
         .from(talks)
         .leftJoin(slots, eq(slots.talkId, talks.id))
+        .leftJoin(talkWeeks, eq(talkWeeks.id, talks.talkWeekId))
         .where(and(inArray(talks.employeeId, ids), ne(talks.status, 'gevoerd')))
         .orderBy(asc(slots.startsAt))
     : []
   const planned = open.filter((r) => r.slot)
-  const unplanned = open.filter((r) => !r.slot)
+  const order = (r: (typeof open)[number]) => (r.tw ? r.tw.year * 100 + r.tw.week : 999999)
+  // Per medewerker alleen het eerstvolgende gesprek waarvoor nog geen moment gekozen is.
+  const unplanned = [
+    ...new Map(
+      open
+        .filter((r) => !r.slot)
+        .sort((a, b) => order(a) - order(b))
+        .reverse()
+        .map((r) => [r.talk.employeeId, r]),
+    ).values(),
+  ].reverse()
 
   const now = isoWeek(new Date())
   const recent = ids.length
