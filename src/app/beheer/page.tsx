@@ -1,10 +1,8 @@
 import Link from 'next/link'
 import { and, asc, desc, eq, inArray, isNull, ne } from 'drizzle-orm'
-import { answers, db, slots, talkWeeks, talks, weekchecks } from '@/db'
-import { Antwoord } from '@/components/Antwoord'
+import { db, slots, talkWeeks, talks, weekchecks } from '@/db'
 import { employeesVisibleTo } from '@/lib/access'
 import { requireStaff } from '@/lib/auth'
-import { decrypt } from '@/lib/crypto'
 import { fmtDate, fmtTime, isoWeek } from '@/lib/dates'
 import { ensureTalks } from '@/lib/talks'
 import { hulpOpgepakt } from './actions'
@@ -22,9 +20,6 @@ export default async function Beheer() {
         .from(weekchecks)
         .where(and(inArray(weekchecks.userId, ids), eq(weekchecks.helpRequested, true), isNull(weekchecks.helpHandledAt)))
         .orderBy(desc(weekchecks.createdAt))
-    : []
-  const helpAnswers = help.length
-    ? await db.select().from(answers).where(and(inArray(answers.weekcheckId, help.map((h) => h.id)), eq(answers.shared, true)))
     : []
 
   const open = ids.length
@@ -53,6 +48,9 @@ export default async function Beheer() {
   const recent = ids.length
     ? await db.select().from(weekchecks).where(inArray(weekchecks.userId, ids))
     : []
+  const thisWeek = recent
+    .filter((c) => c.year === now.year && c.week === now.week)
+    .sort((a, b) => name(a.userId).localeCompare(name(b.userId)))
   const threeWeeksAgo = Date.now() - 21 * 86400000
   const missing = emps.filter((e) => {
     if (e.createdAt.getTime() > threeWeeksAgo) return false
@@ -70,23 +68,37 @@ export default async function Beheer() {
           <h2>Vraagt om hulp</h2>
           <div className="lijst">
             {help.map((h) => (
-              <div key={h.id} className="stapel">
-                <strong>{name(h.userId)}, week {h.week}</strong>
-                {helpAnswers.filter((a) => a.weekcheckId === h.id).map((a) => (
-                  <div key={a.id}>
-                    <span className="zacht klein">{a.questionText}</span>
-                    <br />
-                    <Antwoord a={{ answerType: a.answerType, value: decrypt(a.valueEnc), smiley: a.smiley, note: decrypt(a.noteEnc) }} />
-                  </div>
-                ))}
-                <form action={hulpOpgepakt.bind(null, h.id)}>
-                  <button className="knop klein">Ik heb het opgepakt</button>
-                </form>
+              <div key={h.id} className="rij tussen">
+                <span>
+                  <strong>{name(h.userId)}</strong>
+                  <br />
+                  <span className="zacht klein">Weekcheck week {h.week}</span>
+                </span>
+                <span className="rij" style={{ gap: 8 }}>
+                  <Link href={`/beheer/weekcheck/${h.id}`} className="knop klein">Bekijken</Link>
+                  <form action={hulpOpgepakt.bind(null, h.id, false)}>
+                    <button className="knop licht klein">Opgepakt</button>
+                  </form>
+                </span>
               </div>
             ))}
           </div>
         </section>
       )}
+
+      <section className="kaart">
+        <h2>Weekcheck deze week</h2>
+        <p className="zacht klein">{thisWeek.length} van {emps.filter((e) => e.role === 'medewerker').length} medewerkers hebben hem ingevuld.</p>
+        {thisWeek.length > 0 && (
+          <div className="rij" style={{ gap: 8 }}>
+            {thisWeek.map((c) => (
+              <Link key={c.id} href={`/beheer/weekcheck/${c.id}`} className={`knop klein ${c.readAt ? 'licht' : ''}`}>
+                {name(c.userId)}{c.readAt ? '' : ', nieuw'}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="kaart">
         <h2>Komende gesprekken</h2>

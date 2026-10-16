@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { accessLog, db, employeeTypes, slots, talks, users } from '@/db'
 import { CodeKnop } from '@/components/CodeKnop'
 import { Profiel } from '@/components/Profiel'
+import { Dossier } from '@/components/Dossier'
 import { profileData } from '@/lib/profile'
 import { MedewerkerVelden } from '@/components/MedewerkerVelden'
 import { canViewEmployee, logAccess } from '@/lib/access'
@@ -61,6 +62,7 @@ export default async function Medewerker({ params, searchParams }: { params: Pro
       {melding && MELDING[melding] && <div className={`melding ${melding === 'dubbel' || melding === 'mailfout' ? 'fout' : 'goed'}`}>{MELDING[melding]}</div>}
 
       {profile && <Profiel data={profile} zelf={false} />}
+      {profile && <Dossier employeeId={u.id} />}
 
       {list.length > 0 || (type?.rhythm === 'stage' && u.supervisorId === me.id) ? (
         <section className="kaart">
