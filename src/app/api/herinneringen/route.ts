@@ -1,5 +1,6 @@
-import { and, eq, isNotNull, lt, ne } from 'drizzle-orm'
+import { and, eq, isNotNull, isNull, lt, ne } from 'drizzle-orm'
 import {
+  actionItems,
   db,
   loginAttempts,
   loginTokens,
@@ -13,6 +14,8 @@ import {
 } from '@/db'
 import { addDays, fmtDate, fmtTime, isoWeek, mondayOfWeek, todayStr } from '@/lib/dates'
 import { appUrl, sendMail } from '@/lib/mail'
+import { decrypt } from '@/lib/crypto'
+import { ensureNextMeeting, mailOf, teamOf } from '@/lib/meetings'
 import { ensureTalks } from '@/lib/talks'
 
 // Draait elke ochtend (zie vercel.json). Stuurt herinneringen en ruimt oude gegevens op.
@@ -66,7 +69,33 @@ export async function GET(req: Request) {
       }
     }
 
-    // 5. Bewaartermijn: alles van wie langer dan de termijn uit dienst is, wordt verwijderd.
+    // 5. Overleg: de dag ervoor een seintje aan het team om nog onderwerpen in te brengen.
+    // 6. Een actiepunt uit het overleg dat vandaag klaar moet zijn: seintje aan wie het heeft.
+    const meeting = await ensureNextMeeting(org.id)
+    const team = await teamOf(org.id)
+    async function meetingMail(u: (typeof team)[number], kind: string, ref: string, subject: string, body: string) {
+      const to = mailOf(u)
+      if (!to) return
+      const [row] = await db.insert(reminders).values({ userId: u.id, kind, ref }).onConflictDoNothing().returning()
+      if (!row) return
+      await sendMail({ email: to, name: u.name }, subject, `Hoi ${u.name.split(' ')[0]},\n\n${body}\n\n${appUrl('/vergaderingen')}\n`)
+      log.push(`${kind} aan ${u.id}`)
+    }
+    if (meeting.date === addDays(today, 1)) {
+      for (const u of team) {
+        await meetingMail(u, 'agenda', meeting.id, 'Morgen is het overleg', `Morgen om ${meeting.time} uur is het overleg. Wil je iets bespreken? Breng het dan nog even in.`)
+      }
+    }
+    const due = await db
+      .select()
+      .from(actionItems)
+      .where(and(eq(actionItems.orgId, org.id), eq(actionItems.dueDate, today), isNull(actionItems.doneAt), isNotNull(actionItems.ownerId)))
+    for (const a of due) {
+      const owner = team.find((u) => u.id === a.ownerId)
+      if (owner) await meetingMail(owner, 'actie', a.id, 'Je actiepunt staat voor vandaag', `Dit actiepunt uit het overleg moet vandaag klaar zijn:\n\n${decrypt(a.textEnc)}\n\nIs het gelukt? Vink het dan af.`)
+    }
+
+    // 7. Bewaartermijn: alles van wie langer dan de termijn uit dienst is, wordt verwijderd.
     const cutoff = new Date(now.getTime() - org.retentionMonths * 30.44 * 86400000)
     const gone = await db
       .delete(users)

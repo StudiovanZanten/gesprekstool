@@ -1,7 +1,8 @@
 'use server'
 import { and, eq, max } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
-import { db, employeeTypes, organisations, questionnaires, questions } from '@/db'
+import { db, employeeTypes, organisations, questionnaires, questions, users } from '@/db'
+import { ensureNextMeeting, syncFixedItems } from '@/lib/meetings'
 import { requireAdmin } from '@/lib/auth'
 
 const color = (v: FormDataEntryValue | null, fallback: string) => (/^#[0-9a-fA-F]{6}$/.test(String(v)) ? String(v) : fallback)
@@ -106,4 +107,31 @@ export async function nieuwType(fd: FormData) {
   const [{ m }] = await db.select({ m: max(employeeTypes.position) }).from(employeeTypes).where(eq(employeeTypes.orgId, me.orgId))
   await db.insert(employeeTypes).values({ orgId: me.orgId, name, rhythm, questionnaireId: ql.id, position: (m ?? 0) + 1 })
   redirect(`/beheer/instellingen?lijst=${ql.id}&melding=type`)
+}
+
+// Het vaste overleg: dag, tijd, de vaste agendapunten met eigenaar en wie er in het team zitten.
+export async function bewaarOverleg(fd: FormData) {
+  const me = await requireAdmin()
+  const [org] = await db.select().from(organisations).where(eq(organisations.id, me.orgId))
+  const time = String(fd.get('tijd') ?? '')
+  const titles = fd.getAll('punt-titel').map((v) => String(v).trim().slice(0, 200))
+  const owners = fd.getAll('punt-eigenaar').map((v) => String(v).trim().slice(0, 100))
+  const items = titles.map((title, i) => ({ title, owner: owners[i] ?? '' })).filter((x) => x.title).slice(0, 20)
+  await db
+    .update(organisations)
+    .set({
+      meetingWeekday: int(fd.get('dag'), 1, 7, org.meetingWeekday),
+      meetingTime: /^\d{2}:\d{2}$/.test(time) ? time : org.meetingTime,
+      meetingFixedItems: JSON.stringify(items),
+    })
+    .where(eq(organisations.id, me.orgId))
+  const team = new Set(fd.getAll('team').map(String))
+  for (const u of await db.select().from(users).where(eq(users.orgId, me.orgId))) {
+    const want = team.has(u.id)
+    if (u.inMeeting !== want) await db.update(users).set({ inMeeting: want }).where(eq(users.id, u.id))
+  }
+  // Het volgende overleg krijgt de nieuwe vaste punten, zolang het nog niet begonnen is.
+  const next = await ensureNextMeeting(me.orgId)
+  if (!next.currentItemId) await syncFixedItems(next.id, items)
+  redirect('/beheer/instellingen?melding=bewaard#overleg')
 }

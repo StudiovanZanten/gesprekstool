@@ -20,11 +20,24 @@ Het ontwerp (rollen, techniek, vragenlijsten, gegevens) staat in het document "G
 - Medewerkers: toevoegen, type kiezen, stagebegeleider koppelen, inlogcode maken, uit dienst zetten.
 - Instellingen: naam, logo, kleuren, gespreksduur, bewaartermijn, types en vragenlijsten.
 
+**Overleg (de wekelijkse meeting op dinsdag)**
+- Alleen het team ziet het overleg: wie bij Instellingen, Overleg is aangevinkt, plus de beheerder (voorzitter).
+- Het volgende overleg staat vanzelf klaar met de vaste agendapunten en eigenaren, in vaste volgorde (in te stellen bij Instellingen).
+- Collega's brengen vooraf onderwerpen in bij een agendapunt of de rondvraag. Dat is een verzoek, de voorzitter zet het op de agenda of niet.
+- Vergadermodus: de voorzitter (of de gekozen notulist) start het overleg en gaat met Volgende punt door de agenda. Iedereen ziet op zijn eigen scherm welk punt aan de beurt is; dat scherm ververst elke paar tellen.
+- Per punt korte aantekeningen, een besluit en actiepunten. Regels die beginnen met Actie: worden met Actiepunten herkennen voorgesteld als actiepunt, met wie en wanneer. Pas aan, vink aan en bevestig.
+- Iedereen vinkt actiepunten af, op elk moment. Wat niet klaar is, komt bij het volgende overleg terug.
+- Afronden: ieder teamlid krijgt een mail met alleen de eigen open actiepunten, op het mailadres dat diegene zelf invult bij Overleg.
+- Archief per week, met Opslaan als PDF. Bij Zorg, dagbesteding staat een melding: geen volledige namen of medische gegevens van deelnemers.
+- Aantekeningen, besluiten, onderwerpen en actiepunten staan versleuteld in de database (Neon, Frankfurt).
+
 **Automatisch, elke ochtend**
 - Maandag: herinnering voor de weekcheck.
 - Uitnodiging zodra een gesprek klaarstaat (drie weken voor de gespreksweek).
 - Herinnering als een week voor de gespreksweek nog geen moment is gekozen.
 - Herinnering als drie dagen voor het gesprek de voorbereiding nog niet gedeeld is.
+- De dag voor het overleg: seintje aan het team om nog onderwerpen in te brengen.
+- Op de dag dat een actiepunt klaar moet zijn: seintje aan wie het heeft.
 - Gegevens van wie langer dan de bewaartermijn uit dienst is, worden verwijderd.
 
 ## Privacy, kort

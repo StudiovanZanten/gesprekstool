@@ -42,6 +42,13 @@ export default async function Mijn() {
           <strong>Mijn profiel</strong>
           <span className="zacht">Je ontwikkelplan, je doelen en je verslagen.</span>
         </Link>
+        {user.inMeeting && (
+          <Link href="/vergaderingen" className="tegel">
+            <span className="icoon"><IconWeek /></span>
+            <strong>Overleg</strong>
+            <span className="zacht">De agenda, onderwerpen inbrengen en je actiepunten.</span>
+          </Link>
+        )}
       </div>
     </main>
   )

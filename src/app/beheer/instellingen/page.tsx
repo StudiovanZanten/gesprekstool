@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { asc, eq } from 'drizzle-orm'
-import { db, employeeTypes, organisations, questionnaires, questions } from '@/db'
+import { db, employeeTypes, organisations, questionnaires, questions, users } from '@/db'
 import { requireAdmin } from '@/lib/auth'
 import { bySection, ONDERDELEN, optionsOf } from '@/lib/questions'
-import { bewaarOrganisatie, bewaarType, bewaarVraag, nieuweVraag, nieuwType } from './actions'
+import { fixedItemsOf, WEEKDAYS } from '@/lib/meetings'
+import { bewaarOrganisatie, bewaarOverleg, bewaarType, bewaarVraag, nieuweVraag, nieuwType } from './actions'
 
 export default async function Instellingen({ searchParams }: { searchParams: Promise<{ lijst?: string; melding?: string }> }) {
   const sp = await searchParams
@@ -14,6 +15,8 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
   const selected = lists.find((l) => l.id === sp.lijst)
   const qs = selected ? bySection(await db.select().from(questions).where(eq(questions.questionnaireId, selected.id)).orderBy(asc(questions.position))) : []
   const isTalk = selected?.kind === 'gesprek'
+  const fixed = fixedItemsOf(org)
+  const people = (await db.select().from(users).where(eq(users.orgId, me.orgId)).orderBy(asc(users.name))).filter((u) => u.active)
   const activeCount = qs.filter((q) => q.active).length
   const soortKeuze = (id: string, value: string) => (
     <select id={id} name="soort" defaultValue={value}>
@@ -48,6 +51,42 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
           <div className="veld"><label htmlFor="bewaar">Gegevens bewaren na uit dienst (maanden)</label><input id="bewaar" name="bewaar" type="number" min={1} max={120} defaultValue={org.retentionMonths} /></div>
         </div>
         <label className="schakel"><input type="checkbox" name="perdag" defaultChecked={org.onePerDay} /> Eén gesprek per dag: kiest iemand een moment, dan is die dag vol</label>
+        <div><button className="knop">Bewaren</button></div>
+      </form>
+
+      <form action={bewaarOverleg} className="kaart" id="overleg">
+        <h2>Overleg</h2>
+        <p className="zacht klein">Het volgende overleg wordt vanzelf klaargezet met deze agendapunten, in deze volgorde. Een losse datum pas je aan in het overleg zelf.</p>
+        <div className="velden twee">
+          <div className="veld">
+            <label htmlFor="dag">Vaste dag</label>
+            <select id="dag" name="dag" defaultValue={org.meetingWeekday}>
+              {WEEKDAYS.map((d, i) => <option key={d} value={i + 1}>{d}</option>)}
+            </select>
+          </div>
+          <div className="veld"><label htmlFor="tijd">Begintijd</label><input id="tijd" name="tijd" type="time" defaultValue={org.meetingTime} /></div>
+        </div>
+        <div className="stapel">
+          <h3>Vaste agendapunten</h3>
+          <p className="zacht klein">Een punt weghalen: maak het onderwerp leeg. Een punt toevoegen: vul een lege regel in.</p>
+          {[...fixed, ...Array.from({ length: 3 }, () => ({ title: '', owner: '' }))].map((f, i) => (
+            <div key={i} className="punt-rij">
+              <span className="punt-nr">{i + 1}.</span>
+              <input name="punt-titel" type="text" aria-label={`Agendapunt ${i + 1}`} defaultValue={f.title} placeholder="Agendapunt" />
+              <input name="punt-eigenaar" type="text" aria-label={`Eigenaar van agendapunt ${i + 1}`} defaultValue={f.owner} placeholder="Eigenaar" />
+            </div>
+          ))}
+        </div>
+        <fieldset className="dagen">
+          <legend>Wie doen er mee aan het overleg?</legend>
+          {people.map((u) => (
+            <label key={u.id} className="dag">
+              <input type="checkbox" name="team" value={u.id} defaultChecked={u.inMeeting || u.role === 'beheerder'} disabled={u.role === 'beheerder'} />
+              <span>{u.name}</span>
+            </label>
+          ))}
+        </fieldset>
+        <p className="zacht klein">Wie meedoet, ziet Overleg in het menu en krijgt de mails. Staat iemand er niet bij? Voeg diegene eerst toe bij Medewerkers.</p>
         <div><button className="knop">Bewaren</button></div>
       </form>
 

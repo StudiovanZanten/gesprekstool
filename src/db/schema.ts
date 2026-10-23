@@ -33,6 +33,10 @@ export const organisations = pgTable('organisaties', {
   // Kiest iemand een moment, dan is die hele dag vol voor die gespreksvoerder.
   onePerDay: boolean('een_gesprek_per_dag').notNull().default(true),
   weeklyQuestionnaireId: uuid('weekcheck_vragenlijst_id'),
+  // Het vaste overleg: dag van de week (1 is maandag), begintijd en de vaste agendapunten met eigenaar (JSON lijst).
+  meetingWeekday: integer('vergaderdag').notNull().default(2),
+  meetingTime: text('vergadertijd').notNull().default('10:00'),
+  meetingFixedItems: text('vaste_agendapunten'),
   createdAt: created(),
 })
 
@@ -93,6 +97,9 @@ export const users = pgTable(
     active: boolean('actief').notNull().default(true),
     leftAt: timestamp('uit_dienst', { withTimezone: true }),
     loginCodeHash: text('inlogcode_hash'),
+    // Doet mee aan het wekelijkse overleg, met een eigen mailadres voor de actiepunten (leeg: het gewone mailadres).
+    inMeeting: boolean('in_overleg').notNull().default(false),
+    meetingEmail: text('mail_overleg'),
     createdAt: created(),
   },
   (t) => [
@@ -263,6 +270,78 @@ export const loginAttempts = pgTable('inlogpogingen', {
   at: created(),
 })
 
+// Het wekelijkse overleg. Iedereen zet punten op de agenda, de leiding maakt de notulen.
+export const meetings = pgTable(
+  'vergaderingen',
+  {
+    id: id(),
+    orgId: uuid('organisatie_id').notNull().references(() => organisations.id, { onDelete: 'cascade' }),
+    date: date('datum').notNull(),
+    time: text('tijd').notNull(),
+    // Wie er waren (JSON lijst met gebruiker ids).
+    present: text('aanwezig'),
+    // Vergadermodus: het punt dat nu aan de beurt is. Leeg: het overleg is nog niet begonnen.
+    currentItemId: uuid('huidig_punt'),
+    minuteTakerId: uuid('notulist'),
+    finishedAt: timestamp('afgerond_op', { withTimezone: true }),
+    finishedBy: uuid('afgerond_door'),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex('vergadering_datum_uniek').on(t.orgId, t.date)],
+)
+
+export const meetingItems = pgTable(
+  'agendapunten',
+  {
+    id: id(),
+    meetingId: uuid('vergadering_id').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+    position: integer('volgorde').notNull(),
+    titleEnc: text('titel').notNull(),
+    explanationEnc: text('toelichting'),
+    addedBy: uuid('ingebracht_door').references(() => users.id, { onDelete: 'set null' }),
+    owner: text('eigenaar'),
+    fixed: boolean('vast').notNull().default(false),
+    notesEnc: text('notulen'),
+    decisionEnc: text('besluit'),
+  },
+  (t) => [index('agendapunten_vergadering_idx').on(t.meetingId)],
+)
+
+// Onderwerpen die collega's vooraf inbrengen bij een agendapunt. De voorzitter zet ze op de agenda of niet.
+export const meetingTopics = pgTable(
+  'onderwerpen',
+  {
+    id: id(),
+    meetingId: uuid('vergadering_id').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+    itemId: uuid('agendapunt_id').references(() => meetingItems.id, { onDelete: 'set null' }),
+    titleEnc: text('onderwerp').notNull(),
+    explanationEnc: text('toelichting'),
+    addedBy: uuid('ingebracht_door').references(() => users.id, { onDelete: 'set null' }),
+    // verzoek, akkoord of niet
+    status: text('status').notNull().default('verzoek'),
+    createdAt: created(),
+  },
+  (t) => [index('onderwerpen_vergadering_idx').on(t.meetingId)],
+)
+
+export const actionItems = pgTable(
+  'actiepunten',
+  {
+    id: id(),
+    orgId: uuid('organisatie_id').notNull().references(() => organisations.id, { onDelete: 'cascade' }),
+    meetingId: uuid('vergadering_id').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+    itemId: uuid('agendapunt_id').references(() => meetingItems.id, { onDelete: 'set null' }),
+    textEnc: text('actie').notNull(),
+    ownerId: uuid('wie').references(() => users.id, { onDelete: 'set null' }),
+    dueDate: date('wanneer'),
+    doneAt: timestamp('klaar_op', { withTimezone: true }),
+    doneBy: uuid('klaar_door'),
+    createdAt: created(),
+  },
+  (t) => [index('actiepunten_org_idx').on(t.orgId)],
+)
+
+export type Meeting = typeof meetings.$inferSelect
 export type User = typeof users.$inferSelect
 export type Organisation = typeof organisations.$inferSelect
 export type Question = typeof questions.$inferSelect
