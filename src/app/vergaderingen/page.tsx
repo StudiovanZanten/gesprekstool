@@ -36,6 +36,7 @@ export default async function Vergaderingen({ searchParams }: { searchParams: Pr
   const melding = sp.melding ? MELDINGEN[sp.melding] : undefined
   const rondvraag = agenda.find((i) => /rondvraag/i.test(i.title))
   const live = !!next.currentItemId
+  const isTaker = next.minuteTakerId === me.id
 
   // Een verzoek ziet alleen de voorzitter en wie het inbracht. Afgewezen onderwerpen ziet alleen wie het inbracht.
   const visible = (t: (typeof topics)[number]) => t.status === 'akkoord' || t.addedBy === me.id || (chair && t.status === 'verzoek')
@@ -50,9 +51,13 @@ export default async function Vergaderingen({ searchParams }: { searchParams: Pr
           <div>
             <h2>{live ? 'Het overleg is bezig' : 'Volgende overleg'}</h2>
             <p className="zacht">{fmtDate(next.date)} om {next.time} uur</p>
+            <p className="zacht klein">
+              Notulist: {next.minuteTakerId && names.get(next.minuteTakerId) ? names.get(next.minuteTakerId) : 'de voorzitter'}
+            </p>
+            {isTaker && <span className="pil goed">Jij bent notulist</span>}
           </div>
           <Link href={`/vergaderingen/${next.id}`} className="knop">
-            {live ? 'Meekijken' : chair ? 'Open het overleg' : 'Bekijk het overleg'}
+            {isTaker ? 'Notuleren' : live ? 'Meekijken' : chair ? 'Open het overleg' : 'Bekijk het overleg'}
           </Link>
         </div>
         <ol className="agenda">

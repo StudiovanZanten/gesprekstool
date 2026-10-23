@@ -82,7 +82,26 @@ async function saveAll(me: User, m: Meeting, fd: FormData): Promise<string | und
     }
   }
   await db.update(meetings).set(set).where(eq(meetings.id, m.id))
+  if (set.minuteTakerId && set.minuteTakerId !== m.minuteTakerId) await tellMinuteTaker(m, set.minuteTakerId)
   return melding
+}
+
+// De voorzitter wijst een notulist aan: die krijgt één keer per overleg een mail, en ziet het ook in de tool.
+async function tellMinuteTaker(m: Meeting, userId: string) {
+  const [u] = await db.select().from(users).where(eq(users.id, userId))
+  const to = u && mailOf(u)
+  if (!to) return
+  const [first] = await db.insert(reminders).values({ userId: u.id, kind: 'notulist', ref: m.id }).onConflictDoNothing().returning()
+  if (!first) return
+  try {
+    await sendMail(
+      { email: to, name: u.name },
+      `Je bent notulist bij het overleg van ${fmtDate(m.date)}`,
+      `Hoi ${u.name.split(' ')[0]},\n\nJe bent aangewezen als notulist bij het overleg van ${fmtDate(m.date)} om ${m.time} uur. Open het overleg in de tool, dan kun je per agendapunt aantekeningen maken.\n\n${appUrl(`/vergaderingen/${m.id}`)}\n`,
+    )
+  } catch (e) {
+    console.error('[mail] notulist niet verstuurd', e)
+  }
 }
 
 export async function bewaar(meetingId: string, fd: FormData) {
