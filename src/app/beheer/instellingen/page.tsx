@@ -3,7 +3,8 @@ import { asc, eq } from 'drizzle-orm'
 import { db, employeeTypes, organisations, questionnaires, questions } from '@/db'
 import { requireAdmin } from '@/lib/auth'
 import { bySection, ONDERDELEN, optionsOf } from '@/lib/questions'
-import { bewaarOrganisatie, bewaarType, bewaarVraag, nieuweVraag, nieuwType } from './actions'
+import { fixedItemsOf, WEEKDAYS } from '@/lib/meetings'
+import { bewaarOrganisatie, bewaarOverleg, bewaarType, bewaarVraag, nieuweVraag, nieuwType } from './actions'
 
 export default async function Instellingen({ searchParams }: { searchParams: Promise<{ lijst?: string; melding?: string }> }) {
   const sp = await searchParams
@@ -48,6 +49,26 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
           <div className="veld"><label htmlFor="bewaar">Gegevens bewaren na uit dienst (maanden)</label><input id="bewaar" name="bewaar" type="number" min={1} max={120} defaultValue={org.retentionMonths} /></div>
         </div>
         <label className="schakel"><input type="checkbox" name="perdag" defaultChecked={org.onePerDay} /> Eén gesprek per dag: kiest iemand een moment, dan is die dag vol</label>
+        <div><button className="knop">Bewaren</button></div>
+      </form>
+
+      <form action={bewaarOverleg} className="kaart" id="overleg">
+        <h2>Overleg</h2>
+        <p className="zacht klein">Het volgende overleg wordt vanzelf klaargezet met deze punten. Een losse datum pas je aan in het overleg zelf.</p>
+        <div className="velden twee">
+          <div className="veld">
+            <label htmlFor="dag">Vaste dag</label>
+            <select id="dag" name="dag" defaultValue={org.meetingWeekday}>
+              {WEEKDAYS.map((d, i) => <option key={d} value={i + 1}>{d}</option>)}
+            </select>
+          </div>
+          <div className="veld"><label htmlFor="tijd">Begintijd</label><input id="tijd" name="tijd" type="time" defaultValue={org.meetingTime} /></div>
+        </div>
+        <div className="veld">
+          <label htmlFor="punten">Vaste agendapunten, één per regel</label>
+          <textarea id="punten" name="punten" defaultValue={fixedItemsOf(org).join('\n')} />
+          <span className="hint">Nieuwe punten van collega&apos;s komen vóór het laatste vaste punt, dus zet de rondvraag onderaan.</span>
+        </div>
         <div><button className="knop">Bewaren</button></div>
       </form>
 

@@ -20,11 +20,20 @@ Het ontwerp (rollen, techniek, vragenlijsten, gegevens) staat in het document "G
 - Medewerkers: toevoegen, type kiezen, stagebegeleider koppelen, inlogcode maken, uit dienst zetten.
 - Instellingen: naam, logo, kleuren, gespreksduur, bewaartermijn, types en vragenlijsten.
 
+**Overleg (het vaste overleg, standaard op dinsdag)**
+- Het volgende overleg staat vanzelf klaar met de vaste agendapunten (in te stellen bij Instellingen, met dag en tijd).
+- Iedereen zet zelf punten op de agenda, met een toelichting. Nieuwe punten komen vóór het laatste vaste punt, de rondvraag.
+- De leiding maakt per punt de notulen, een besluit en actiepunten (wat, wie, wanneer), en vinkt aan wie er waren.
+- Open actiepunten van eerder komen elke keer terug tot ze klaar zijn. Iedereen ziet en vinkt zijn eigen actiepunten af.
+- Afronden zet de notulen klaar voor iedereen (ook als PDF) en stuurt een seintje per mail. Stagiaires doen niet mee en zien het overleg niet.
+
 **Automatisch, elke ochtend**
 - Maandag: herinnering voor de weekcheck.
 - Uitnodiging zodra een gesprek klaarstaat (drie weken voor de gespreksweek).
 - Herinnering als een week voor de gespreksweek nog geen moment is gekozen.
 - Herinnering als drie dagen voor het gesprek de voorbereiding nog niet gedeeld is.
+- De dag voor het overleg: seintje om nog punten op de agenda te zetten.
+- Op de dag dat een actiepunt klaar moet zijn: seintje aan wie het heeft.
 - Gegevens van wie langer dan de bewaartermijn uit dienst is, worden verwijderd.
 
 ## Privacy, kort

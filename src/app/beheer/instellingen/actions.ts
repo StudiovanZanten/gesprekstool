@@ -107,3 +107,24 @@ export async function nieuwType(fd: FormData) {
   await db.insert(employeeTypes).values({ orgId: me.orgId, name, rhythm, questionnaireId: ql.id, position: (m ?? 0) + 1 })
   redirect(`/beheer/instellingen?lijst=${ql.id}&melding=type`)
 }
+
+// Het vaste overleg: dag, tijd en de punten die elke keer op de agenda komen.
+export async function bewaarOverleg(fd: FormData) {
+  const me = await requireAdmin()
+  const [org] = await db.select().from(organisations).where(eq(organisations.id, me.orgId))
+  const time = String(fd.get('tijd') ?? '')
+  const items = String(fd.get('punten') ?? '')
+    .split('\n')
+    .map((x) => x.trim().slice(0, 200))
+    .filter(Boolean)
+    .slice(0, 20)
+  await db
+    .update(organisations)
+    .set({
+      meetingWeekday: int(fd.get('dag'), 1, 7, org.meetingWeekday),
+      meetingTime: /^\d{2}:\d{2}$/.test(time) ? time : org.meetingTime,
+      meetingFixedItems: JSON.stringify(items),
+    })
+    .where(eq(organisations.id, me.orgId))
+  redirect('/beheer/instellingen?melding=bewaard#overleg')
+}

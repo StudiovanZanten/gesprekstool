@@ -1,5 +1,6 @@
-import { and, eq, isNotNull, lt, ne } from 'drizzle-orm'
+import { and, eq, isNotNull, isNull, lt, ne } from 'drizzle-orm'
 import {
+  actionItems,
   db,
   loginAttempts,
   loginTokens,
@@ -13,6 +14,7 @@ import {
 } from '@/db'
 import { addDays, fmtDate, fmtTime, isoWeek, mondayOfWeek, todayStr } from '@/lib/dates'
 import { appUrl, sendMail } from '@/lib/mail'
+import { colleaguesOf, ensureNextMeeting } from '@/lib/meetings'
 import { ensureTalks } from '@/lib/talks'
 
 // Draait elke ochtend (zie vercel.json). Stuurt herinneringen en ruimt oude gegevens op.
@@ -66,7 +68,25 @@ export async function GET(req: Request) {
       }
     }
 
-    // 5. Bewaartermijn: alles van wie langer dan de termijn uit dienst is, wordt verwijderd.
+    // 5. Overleg: de dag ervoor een seintje om punten op de agenda te zetten.
+    const meeting = await ensureNextMeeting(org.id)
+    const attendees = await colleaguesOf(org.id)
+    if (meeting.date === addDays(today, 1)) {
+      for (const u of attendees) {
+        await once(u, 'agenda', meeting.id, 'Morgen is het overleg', `Morgen om ${meeting.time} uur is het overleg. Wil je iets bespreken? Zet het dan nog even op de agenda.`)
+      }
+    }
+    // 6. Een actiepunt uit het overleg dat vandaag klaar moet zijn.
+    const due = await db
+      .select()
+      .from(actionItems)
+      .where(and(eq(actionItems.orgId, org.id), eq(actionItems.dueDate, today), isNull(actionItems.doneAt), isNotNull(actionItems.ownerId)))
+    for (const a of due) {
+      const owner = attendees.find((u) => u.id === a.ownerId)
+      if (owner) await once(owner, 'actie', a.id, 'Je actiepunt staat voor vandaag', 'Er staat een actiepunt uit het overleg op jouw naam dat vandaag klaar moet zijn. Is het gelukt? Vink het dan af bij Overleg.')
+    }
+
+    // 7. Bewaartermijn: alles van wie langer dan de termijn uit dienst is, wordt verwijderd.
     const cutoff = new Date(now.getTime() - org.retentionMonths * 30.44 * 86400000)
     const gone = await db
       .delete(users)

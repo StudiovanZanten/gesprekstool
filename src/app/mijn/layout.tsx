@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Kop, orgStyle } from '@/components/Kop'
+import { isIntern } from '@/lib/access'
 import { getOrg, requireUser } from '@/lib/auth'
 
 export default async function MijnLayout({ children }: { children: React.ReactNode }) {
@@ -8,7 +9,7 @@ export default async function MijnLayout({ children }: { children: React.ReactNo
   const org = await getOrg(user.orgId)
   return (
     <div style={orgStyle(org)}>
-      <Kop org={org} user={user} />
+      <Kop org={org} user={user} intern={await isIntern(user)} />
       {children}
     </div>
   )

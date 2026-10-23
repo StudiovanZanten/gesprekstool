@@ -33,6 +33,10 @@ export const organisations = pgTable('organisaties', {
   // Kiest iemand een moment, dan is die hele dag vol voor die gespreksvoerder.
   onePerDay: boolean('een_gesprek_per_dag').notNull().default(true),
   weeklyQuestionnaireId: uuid('weekcheck_vragenlijst_id'),
+  // Het vaste overleg: dag van de week (1 is maandag), begintijd en de punten die elke keer op de agenda staan (JSON lijst).
+  meetingWeekday: integer('vergaderdag').notNull().default(2),
+  meetingTime: text('vergadertijd').notNull().default('10:00'),
+  meetingFixedItems: text('vaste_agendapunten'),
   createdAt: created(),
 })
 
@@ -263,6 +267,57 @@ export const loginAttempts = pgTable('inlogpogingen', {
   at: created(),
 })
 
+// Het wekelijkse overleg. Iedereen zet punten op de agenda, de leiding maakt de notulen.
+export const meetings = pgTable(
+  'vergaderingen',
+  {
+    id: id(),
+    orgId: uuid('organisatie_id').notNull().references(() => organisations.id, { onDelete: 'cascade' }),
+    date: date('datum').notNull(),
+    time: text('tijd').notNull(),
+    // Wie er waren (JSON lijst met gebruiker ids).
+    present: text('aanwezig'),
+    finishedAt: timestamp('afgerond_op', { withTimezone: true }),
+    finishedBy: uuid('afgerond_door'),
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex('vergadering_datum_uniek').on(t.orgId, t.date)],
+)
+
+export const meetingItems = pgTable(
+  'agendapunten',
+  {
+    id: id(),
+    meetingId: uuid('vergadering_id').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+    position: integer('volgorde').notNull(),
+    titleEnc: text('titel').notNull(),
+    explanationEnc: text('toelichting'),
+    addedBy: uuid('ingebracht_door').references(() => users.id, { onDelete: 'set null' }),
+    fixed: boolean('vast').notNull().default(false),
+    notesEnc: text('notulen'),
+    decisionEnc: text('besluit'),
+  },
+  (t) => [index('agendapunten_vergadering_idx').on(t.meetingId)],
+)
+
+export const actionItems = pgTable(
+  'actiepunten',
+  {
+    id: id(),
+    orgId: uuid('organisatie_id').notNull().references(() => organisations.id, { onDelete: 'cascade' }),
+    meetingId: uuid('vergadering_id').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+    itemId: uuid('agendapunt_id').references(() => meetingItems.id, { onDelete: 'set null' }),
+    textEnc: text('actie').notNull(),
+    ownerId: uuid('wie').references(() => users.id, { onDelete: 'set null' }),
+    dueDate: date('wanneer'),
+    doneAt: timestamp('klaar_op', { withTimezone: true }),
+    doneBy: uuid('klaar_door'),
+    createdAt: created(),
+  },
+  (t) => [index('actiepunten_org_idx').on(t.orgId)],
+)
+
+export type Meeting = typeof meetings.$inferSelect
 export type User = typeof users.$inferSelect
 export type Organisation = typeof organisations.$inferSelect
 export type Question = typeof questions.$inferSelect
