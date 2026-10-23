@@ -216,6 +216,7 @@ export default async function Vergadering({
                   <option value="">Ik notuleer zelf</option>
                   {team.filter((u) => u.id !== me.id).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
+                <span className="hint">Kies je iemand en klik je op Bewaren, dan krijgt diegene een mail en kan meteen notuleren.</span>
               </div>
             </div>
           )}
