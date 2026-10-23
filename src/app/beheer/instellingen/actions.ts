@@ -1,7 +1,8 @@
 'use server'
 import { and, eq, max } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
-import { db, employeeTypes, organisations, questionnaires, questions } from '@/db'
+import { db, employeeTypes, organisations, questionnaires, questions, users } from '@/db'
+import { ensureNextMeeting, syncFixedItems } from '@/lib/meetings'
 import { requireAdmin } from '@/lib/auth'
 
 const color = (v: FormDataEntryValue | null, fallback: string) => (/^#[0-9a-fA-F]{6}$/.test(String(v)) ? String(v) : fallback)
@@ -108,16 +109,14 @@ export async function nieuwType(fd: FormData) {
   redirect(`/beheer/instellingen?lijst=${ql.id}&melding=type`)
 }
 
-// Het vaste overleg: dag, tijd en de punten die elke keer op de agenda komen.
+// Het vaste overleg: dag, tijd, de vaste agendapunten met eigenaar en wie er in het team zitten.
 export async function bewaarOverleg(fd: FormData) {
   const me = await requireAdmin()
   const [org] = await db.select().from(organisations).where(eq(organisations.id, me.orgId))
   const time = String(fd.get('tijd') ?? '')
-  const items = String(fd.get('punten') ?? '')
-    .split('\n')
-    .map((x) => x.trim().slice(0, 200))
-    .filter(Boolean)
-    .slice(0, 20)
+  const titles = fd.getAll('punt-titel').map((v) => String(v).trim().slice(0, 200))
+  const owners = fd.getAll('punt-eigenaar').map((v) => String(v).trim().slice(0, 100))
+  const items = titles.map((title, i) => ({ title, owner: owners[i] ?? '' })).filter((x) => x.title).slice(0, 20)
   await db
     .update(organisations)
     .set({
@@ -126,5 +125,13 @@ export async function bewaarOverleg(fd: FormData) {
       meetingFixedItems: JSON.stringify(items),
     })
     .where(eq(organisations.id, me.orgId))
+  const team = new Set(fd.getAll('team').map(String))
+  for (const u of await db.select().from(users).where(eq(users.orgId, me.orgId))) {
+    const want = team.has(u.id)
+    if (u.inMeeting !== want) await db.update(users).set({ inMeeting: want }).where(eq(users.id, u.id))
+  }
+  // Het volgende overleg krijgt de nieuwe vaste punten, zolang het nog niet begonnen is.
+  const next = await ensureNextMeeting(me.orgId)
+  if (!next.currentItemId) await syncFixedItems(next.id, items)
   redirect('/beheer/instellingen?melding=bewaard#overleg')
 }

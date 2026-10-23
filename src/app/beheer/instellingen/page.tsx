@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { asc, eq } from 'drizzle-orm'
-import { db, employeeTypes, organisations, questionnaires, questions } from '@/db'
+import { db, employeeTypes, organisations, questionnaires, questions, users } from '@/db'
 import { requireAdmin } from '@/lib/auth'
 import { bySection, ONDERDELEN, optionsOf } from '@/lib/questions'
 import { fixedItemsOf, WEEKDAYS } from '@/lib/meetings'
@@ -15,6 +15,8 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
   const selected = lists.find((l) => l.id === sp.lijst)
   const qs = selected ? bySection(await db.select().from(questions).where(eq(questions.questionnaireId, selected.id)).orderBy(asc(questions.position))) : []
   const isTalk = selected?.kind === 'gesprek'
+  const fixed = fixedItemsOf(org)
+  const people = (await db.select().from(users).where(eq(users.orgId, me.orgId)).orderBy(asc(users.name))).filter((u) => u.active)
   const activeCount = qs.filter((q) => q.active).length
   const soortKeuze = (id: string, value: string) => (
     <select id={id} name="soort" defaultValue={value}>
@@ -54,7 +56,7 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
 
       <form action={bewaarOverleg} className="kaart" id="overleg">
         <h2>Overleg</h2>
-        <p className="zacht klein">Het volgende overleg wordt vanzelf klaargezet met deze punten. Een losse datum pas je aan in het overleg zelf.</p>
+        <p className="zacht klein">Het volgende overleg wordt vanzelf klaargezet met deze agendapunten, in deze volgorde. Een losse datum pas je aan in het overleg zelf.</p>
         <div className="velden twee">
           <div className="veld">
             <label htmlFor="dag">Vaste dag</label>
@@ -64,11 +66,27 @@ export default async function Instellingen({ searchParams }: { searchParams: Pro
           </div>
           <div className="veld"><label htmlFor="tijd">Begintijd</label><input id="tijd" name="tijd" type="time" defaultValue={org.meetingTime} /></div>
         </div>
-        <div className="veld">
-          <label htmlFor="punten">Vaste agendapunten, één per regel</label>
-          <textarea id="punten" name="punten" defaultValue={fixedItemsOf(org).join('\n')} />
-          <span className="hint">Nieuwe punten van collega&apos;s komen vóór het laatste vaste punt, dus zet de rondvraag onderaan.</span>
+        <div className="stapel">
+          <h3>Vaste agendapunten</h3>
+          <p className="zacht klein">Een punt weghalen: maak het onderwerp leeg. Een punt toevoegen: vul een lege regel in.</p>
+          {[...fixed, ...Array.from({ length: 3 }, () => ({ title: '', owner: '' }))].map((f, i) => (
+            <div key={i} className="punt-rij">
+              <span className="punt-nr">{i + 1}.</span>
+              <input name="punt-titel" type="text" aria-label={`Agendapunt ${i + 1}`} defaultValue={f.title} placeholder="Agendapunt" />
+              <input name="punt-eigenaar" type="text" aria-label={`Eigenaar van agendapunt ${i + 1}`} defaultValue={f.owner} placeholder="Eigenaar" />
+            </div>
+          ))}
         </div>
+        <fieldset className="dagen">
+          <legend>Wie doen er mee aan het overleg?</legend>
+          {people.map((u) => (
+            <label key={u.id} className="dag">
+              <input type="checkbox" name="team" value={u.id} defaultChecked={u.inMeeting || u.role === 'beheerder'} disabled={u.role === 'beheerder'} />
+              <span>{u.name}</span>
+            </label>
+          ))}
+        </fieldset>
+        <p className="zacht klein">Wie meedoet, ziet Overleg in het menu en krijgt de mails. Staat iemand er niet bij? Voeg diegene eerst toe bij Medewerkers.</p>
         <div><button className="knop">Bewaren</button></div>
       </form>
 

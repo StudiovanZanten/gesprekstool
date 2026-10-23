@@ -1,88 +1,130 @@
 import Link from 'next/link'
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 import { db, meetings } from '@/db'
+import { ActieRegel, OnderwerpRegel, PRIVACY_TEKST } from '@/components/Overleg'
 import { requireUser } from '@/lib/auth'
-import { fmtDate } from '@/lib/dates'
-import { agendaOf, canLead, colleaguesOf, ensureNextMeeting, openActionsOf } from '@/lib/meetings'
-import { actieKlaar, puntToevoegen, puntWeg } from './actions'
+import { fmtDate, isoWeek } from '@/lib/dates'
+import { agendaOf, ensureNextMeeting, isChair, openActionsOfOrg, teamOf, topicsOf } from '@/lib/meetings'
+import { actieKlaar, mijnMailadres, onderwerpInbrengen, onderwerpWeg, verzoekBeslissen } from './actions'
 
-const MELDINGEN: Record<string, string> = {
-  punt: 'Je punt staat op de agenda.',
+const MELDINGEN: Record<string, [string, string]> = {
+  ingebracht: ['goed', 'Je onderwerp is ingebracht.'],
+  leeg: ['fout', 'Vul eerst in waar je het over wilt hebben.'],
+  mail: ['goed', 'Je mailadres is bewaard.'],
+  'mail-fout': ['fout', 'Dat mailadres klopt niet. Kijk het nog even na.'],
 }
 
-// Overzicht van het wekelijkse overleg: de agenda van de volgende keer, je eigen actiepunten en eerdere notulen.
+// Overzicht van het overleg: de agenda van de volgende keer, onderwerpen inbrengen, actiepunten en het archief.
 export default async function Vergaderingen({ searchParams }: { searchParams: Promise<{ melding?: string }> }) {
   const sp = await searchParams
   const me = await requireUser()
   const next = await ensureNextMeeting(me.orgId)
   const agenda = await agendaOf(next.id)
-  const names = new Map((await colleaguesOf(me.orgId)).map((u) => [u.id, u.name]))
-  const mine = await openActionsOf(me)
+  const topics = await topicsOf(next.id)
+  const team = await teamOf(me.orgId)
+  const names = new Map(team.map((u) => [u.id, u.name]))
+  const open = await openActionsOfOrg(me.orgId)
+  const mine = open.filter((a) => a.ownerId === me.id)
+  const others = open.filter((a) => a.ownerId !== me.id)
   const earlier = await db
     .select()
     .from(meetings)
     .where(and(eq(meetings.orgId, me.orgId), isNotNull(meetings.finishedAt)))
     .orderBy(desc(meetings.date))
-    .limit(20)
+    .limit(60)
+  const chair = isChair(me)
+  const melding = sp.melding ? MELDINGEN[sp.melding] : undefined
+  const rondvraag = agenda.find((i) => /rondvraag/i.test(i.title))
+  const live = !!next.currentItemId
+
+  // Een verzoek ziet alleen de voorzitter en wie het inbracht. Afgewezen onderwerpen ziet alleen wie het inbracht.
+  const visible = (t: (typeof topics)[number]) => t.status === 'akkoord' || t.addedBy === me.id || (chair && t.status === 'verzoek')
 
   return (
     <main>
       <h1>Overleg</h1>
-      {sp.melding && MELDINGEN[sp.melding] && <div className="melding goed">{MELDINGEN[sp.melding]}</div>}
+      {melding && <div className={`melding ${melding[0]}`}>{melding[1]}</div>}
 
       <section className="kaart">
         <div className="rij tussen">
           <div>
-            <h2>Volgende overleg</h2>
+            <h2>{live ? 'Het overleg is bezig' : 'Volgende overleg'}</h2>
             <p className="zacht">{fmtDate(next.date)} om {next.time} uur</p>
           </div>
           <Link href={`/vergaderingen/${next.id}`} className="knop">
-            {canLead(me) ? 'Open het overleg' : 'Bekijk de agenda'}
+            {live ? 'Meekijken' : chair ? 'Open het overleg' : 'Bekijk het overleg'}
           </Link>
         </div>
         <ol className="agenda">
           {agenda.map((it) => (
-            <li key={it.id}>
-              <div className="rij tussen">
+            <li key={it.id} className={it.id === next.currentItemId ? 'nu' : undefined}>
+              <div className="rij" style={{ gap: 8 }}>
                 <strong>{it.title}</strong>
-                {!it.fixed && it.addedBy === me.id && (
-                  <form action={puntWeg.bind(null, next.id, it.id)}>
-                    <input type="hidden" name="terug" value="overzicht" />
-                    <button className="knop licht klein">Weghalen</button>
-                  </form>
-                )}
+                {it.owner && <span className="pil">{it.owner}</span>}
+                {it.id === next.currentItemId && <span className="pil goed">Nu aan de beurt</span>}
               </div>
-              {it.explanation && <p className="zacht klein tekstblok">{it.explanation}</p>}
-              {!it.fixed && it.addedBy && <p className="zacht klein">Ingebracht door {names.get(it.addedBy) ?? 'een oud collega'}</p>}
+              {topics.filter((t) => t.itemId === it.id && visible(t)).map((t) => (
+                <div key={t.id} className="onderwerp">
+                  <OnderwerpRegel t={t} names={names} />
+                  <div className="rij" style={{ gap: 6 }}>
+                    {chair && t.status === 'verzoek' && (
+                      <>
+                        <form action={verzoekBeslissen.bind(null, t.id, 'akkoord')}>
+                          <input type="hidden" name="terug" value="overzicht" />
+                          <button className="knop klein">Op de agenda</button>
+                        </form>
+                        <form action={verzoekBeslissen.bind(null, t.id, 'niet')}>
+                          <input type="hidden" name="terug" value="overzicht" />
+                          <button className="knop licht klein">Niet deze keer</button>
+                        </form>
+                      </>
+                    )}
+                    {t.addedBy === me.id && t.status !== 'akkoord' && (
+                      <form action={onderwerpWeg.bind(null, t.id)}>
+                        <input type="hidden" name="terug" value="overzicht" />
+                        <button className="knop licht klein">Weghalen</button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              ))}
             </li>
           ))}
         </ol>
       </section>
 
-      <form action={puntToevoegen.bind(null, next.id)} className="kaart tint">
-        <h2>Zet een punt op de agenda</h2>
+      <form action={onderwerpInbrengen.bind(null, next.id)} className="kaart tint">
+        <h2>Onderwerp inbrengen</h2>
+        <p className="zacht klein">
+          {chair ? 'Jouw onderwerp komt meteen op de agenda.' : 'Je onderwerp komt als verzoek bij Reno, die het op de agenda zet.'}
+        </p>
         <input type="hidden" name="terug" value="overzicht" />
         <div className="veld">
-          <label htmlFor="nieuw-titel">Waar wil je het over hebben?</label>
-          <input id="nieuw-titel" name="nieuw-titel" type="text" maxLength={200} required />
+          <label htmlFor="agendapunt">Bij welk agendapunt?</label>
+          <select id="agendapunt" name="agendapunt" defaultValue={rondvraag?.id ?? agenda[0]?.id}>
+            {agenda.map((it) => <option key={it.id} value={it.id}>{it.title}</option>)}
+          </select>
+          <span className="hint">Bij Zorg, dagbesteding: {PRIVACY_TEKST.toLowerCase()}</span>
         </div>
         <div className="veld">
-          <label htmlFor="nieuw-toelichting">Toelichting (mag leeg blijven)</label>
-          <textarea id="nieuw-toelichting" name="nieuw-toelichting" maxLength={2000} style={{ minHeight: 80 }} />
+          <label htmlFor="onderwerp">Waar wil je het over hebben?</label>
+          <input id="onderwerp" name="onderwerp" type="text" maxLength={200} required />
         </div>
-        <div><button className="knop">Op de agenda zetten</button></div>
+        <div className="veld">
+          <label htmlFor="toelichting">Toelichting (mag leeg blijven)</label>
+          <textarea id="toelichting" name="toelichting" maxLength={2000} style={{ minHeight: 80 }} />
+        </div>
+        <div><button className="knop">Inbrengen</button></div>
       </form>
 
-      <section className="kaart">
-        <h2>Mijn actiepunten</h2>
-        {mine.length ? (
+      <section className="kaart" id="acties">
+        <h2>Actiepunten</h2>
+        <p className="zacht klein">Iedereen mag een actiepunt afvinken. Wat niet klaar is, komt vanzelf terug bij het volgende overleg.</p>
+        {open.length ? (
           <div className="lijst">
-            {mine.map((a) => (
+            {[...mine, ...others].map((a) => (
               <div key={a.id} className="rij tussen">
-                <div>
-                  <p>{a.text}</p>
-                  {a.dueDate && <p className="zacht klein">Klaar op {fmtDate(a.dueDate)}</p>}
-                </div>
+                <ActieRegel a={a} names={names} me={me.id} />
                 <form action={actieKlaar.bind(null, a.id, true)}>
                   <button className="knop klein">Klaar</button>
                 </form>
@@ -90,16 +132,27 @@ export default async function Vergaderingen({ searchParams }: { searchParams: Pr
             ))}
           </div>
         ) : (
-          <p className="zacht">Je hebt geen open actiepunten.</p>
+          <p className="zacht">Er staan geen open actiepunten.</p>
         )}
       </section>
 
+      <form action={mijnMailadres} className="kaart" id="mail">
+        <h2>Mijn mailadres voor actiepunten</h2>
+        <p className="zacht klein">Na elk overleg krijg je hier een mail met alleen jouw eigen actiepunten. Laat je het leeg, dan gebruiken we {me.email ?? 'je gewone mailadres'}.</p>
+        <div className="rij">
+          <input name="mail" type="email" aria-label="Mailadres voor actiepunten" defaultValue={me.meetingEmail ?? ''} placeholder={me.email ?? ''} style={{ maxWidth: 360 }} />
+          <button className="knop">Bewaren</button>
+        </div>
+      </form>
+
       <section className="kaart">
-        <h2>Eerdere notulen</h2>
+        <h2>Archief</h2>
         {earlier.length ? (
           <div className="lijst">
             {earlier.map((m) => (
-              <Link key={m.id} href={`/vergaderingen/${m.id}`}>Overleg van {fmtDate(m.date)}</Link>
+              <Link key={m.id} href={`/vergaderingen/${m.id}`}>
+                Week {isoWeek(new Date(m.date + 'T12:00:00Z')).week}, {fmtDate(m.date)}
+              </Link>
             ))}
           </div>
         ) : (

@@ -176,6 +176,14 @@ table.tabel { width: 100%; border-collapse: collapse; }
 }
 
 /* Overleg */
+.melding.let-op { background: color-mix(in srgb, var(--let-op) 12%, white); }
+.kaart.nu { border: 3px solid var(--goed); }
+.agenda > li.nu { background: color-mix(in srgb, var(--goed) 8%, white); border-radius: 16px; padding-left: 12px; padding-right: 12px; }
+.onderwerp { display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; margin-top: 8px; border-left: 4px solid var(--accent); background: var(--bg); border-radius: 0 14px 14px 0; }
+.notulen { margin: 0; padding-left: 20px; }
+.notulen li { margin-bottom: 4px; }
+.actie-tekst { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.voorstel { background: var(--papier); border: 2px dashed var(--accent); }
 .agenda { margin: 0; padding-left: 24px; display: flex; flex-direction: column; }
 .agenda > li { padding: 14px 0 14px 6px; border-top: 1px solid var(--lijn); }
 .agenda > li > * + * { margin-top: 6px; }
@@ -190,4 +198,10 @@ table.tabel { width: 100%; border-collapse: collapse; }
 .knop:disabled { opacity: .35; cursor: default; filter: none; }
 @media print {
   .agenda > li { break-inside: avoid; }
+}
+.punt-rij { display: grid; grid-template-columns: 32px 2fr 1fr; gap: 10px; align-items: center; }
+.punt-nr { font-weight: 700; color: var(--zacht); text-align: right; }
+@media (max-width: 560px) {
+  .punt-rij { grid-template-columns: 26px 1fr; }
+  .punt-rij input[name=punt-eigenaar] { grid-column: 2; }
 }

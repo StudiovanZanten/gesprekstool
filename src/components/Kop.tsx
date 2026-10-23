@@ -3,7 +3,8 @@ import type { Organisation, User } from '@/db'
 import { uitloggen } from '@/app/inloggen/actions'
 
 // Bovenbalk met logo en naam van de organisatie, plus de menu's die bij de rol horen.
-export function Kop({ org, user, intern = false }: { org: Organisation; user: User; intern?: boolean }) {
+export function Kop({ org, user }: { org: Organisation; user: User }) {
+  const meeting = user.role === 'beheerder' || user.inMeeting
   const staff = user.role !== 'medewerker'
   return (
     <header className="kop">
@@ -21,14 +22,14 @@ export function Kop({ org, user, intern = false }: { org: Organisation; user: Us
               <Link href="/beheer">Start</Link>
               <Link href="/beheer/medewerkers">Medewerkers</Link>
               <Link href="/beheer/planning">Planning</Link>
-              <Link href="/vergaderingen">Overleg</Link>
+              {meeting && <Link href="/vergaderingen">Overleg</Link>}
               {user.role === 'beheerder' && <Link href="/beheer/instellingen">Instellingen</Link>}
             </>
           ) : (
             <>
               <Link href="/mijn">Start</Link>
               <Link href="/mijn/profiel">Mijn profiel</Link>
-              {!intern && <Link href="/vergaderingen">Overleg</Link>}
+              {meeting && <Link href="/vergaderingen">Overleg</Link>}
             </>
           )}
           <form action={uitloggen}>
